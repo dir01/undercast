@@ -1,0 +1,10 @@
+version: '2'
+services:
+  postgres:
+    image: postgres
+    environment:
+      POSTGRES_USER: 'torrentCaster'
+      POSTGRES_PASSWORD: 'password'
+      POSTGRES_DB: 'torrentCaster'
+    ports:
+      - '5432:5432'
