@@ -1,8 +1,7 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
+	"bytes"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -20,34 +19,63 @@ func TestMain(m *testing.M) {
 		os.Getenv("TEST_DB_USERNAME"),
 		os.Getenv("TEST_DB_PASSWORD"),
 		os.Getenv("TEST_DB_NAME"))
-	ensureTableExists()
+	createTable()
 
 	code := m.Run()
-	clearTable()
+
+	dropTable()
+
 	os.Exit(code)
 }
 
 func TestEmptyTable(t *testing.T) {
 	clearTable()
 
-	req, _ := http.NewRequest("GET", "/products", nil)
+	req, _ := http.NewRequest("GET", "/episodes", nil)
 	response := executeRequest(req)
 
-	checkResponseCode(t, http.StatusOK, response.Code)
+	checkResponseCode(t, response, http.StatusOK)
 }
 
-func TestGetNonExistentProduct(t *testing.T) {
+func TestCreateEpisodeWithMagnet(t *testing.T) {
 	clearTable()
 
-	req, _ := http.NewRequest("GET", "/product/666", nil)
+	payload := []byte(`{
+		"name": "Around the world in 80 days",
+		"magnet": "magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c"
+	}`)
+	req, _ := http.NewRequest("POST", "/episodes", bytes.NewBuffer(payload))
 	response := executeRequest(req)
 
-	checkResponseCode(t, http.StatusNotFound, response.Code)
-	var m map[string]string
-	json.Unmarshal(response.Body.Bytes(), &m)
-	if m["error"] != "Product not found" {
-		t.Errorf("Expected the 'error' key of the response to be set to 'Product not found'. Got '%s'", m["error"])
-	}
+	checkResponseCode(t, response, http.StatusCreated)
+	checkResponseBody(t, response, `{"id":1,"name":"Around the world in 80 days","magnet":"magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c","url":""}`)
+}
+
+func TestCreateEpisodeWithUrl(t *testing.T) {
+	clearTable()
+
+	payload := []byte(`{
+		"name": "Around the world in 80 days",
+		"url": "http://legittorrents.info/download.php?id=1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c"
+	}`)
+	req, _ := http.NewRequest("POST", "/episodes", bytes.NewBuffer(payload))
+	response := executeRequest(req)
+
+	checkResponseCode(t, response, http.StatusCreated)
+	checkResponseBody(t, response, `{"id":1,"name":"Around the world in 80 days","magnet":"","url":"http://legittorrents.info/download.php?id=1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c"}`)
+}
+
+func TestFailToCreateEpisode(t *testing.T) {
+	clearTable()
+
+	payload := []byte(`{
+		"name": "Around the world in 80 days"
+	}`)
+	req, _ := http.NewRequest("POST", "/episodes", bytes.NewBuffer(payload))
+	response := executeRequest(req)
+
+	checkResponseCode(t, response, http.StatusInternalServerError)
+	checkResponseBody(t, response, `{"error":"pq: new row for relation \"episodes\" violates check constraint \"require_magnet_or_url\""}`)
 }
 
 func executeRequest(req *http.Request) *httptest.ResponseRecorder {
@@ -56,28 +84,44 @@ func executeRequest(req *http.Request) *httptest.ResponseRecorder {
 	return rr
 }
 
-func ensureTableExists() {
+func checkResponseCode(t *testing.T, response *httptest.ResponseRecorder, expectedCode int) {
+	actualCode := response.Code
+	if expectedCode != actualCode {
+		t.Errorf("Expected response code %d. Got %d\n%s", expectedCode, actualCode, response.Body)
+	}
+}
+
+func checkResponseBody(t *testing.T, response *httptest.ResponseRecorder, expectedBody string) {
+	actualBody := response.Body.String()
+	if expectedBody != actualBody {
+		t.Errorf("Unexpected response body\nEXPECTED:\n%s\nACTUAL:\n%s", expectedBody, actualBody)
+	}
+}
+
+func createTable() {
 	if _, err := a.DB.Exec(tableCreationQuery); err != nil {
-		fmt.Println("Foooo")
 		log.Fatal(err)
 	}
 }
 
-func checkResponseCode(t *testing.T, expected, actual int) {
-	if expected != actual {
-		t.Errorf("Expected response code %d. Got %d\n", expected, actual)
-	}
-}
-
 func clearTable() {
-	a.DB.Exec("DELETE FROM products")
-	a.DB.Exec("ALTER SEQUENCE products_id_seq RESTART WITH 1")
+	a.DB.Exec("DELETE FROM episodes")
+	a.DB.Exec("ALTER SEQUENCE episodes_id_seq RESTART WITH 1")
 }
 
-const tableCreationQuery = `CREATE TABLE IF NOT EXISTS products
-(
-    id SERIAL,
-    name TEXT NOT NULL,
-    price NUMERIC(10,2) NOT NULL DEFAULT 0.00,
-    CONSTRAINT products_pkey PRIMARY KEY (id)
+func dropTable() {
+	a.DB.Exec("DROP TABLE episodes")
+}
+
+const tableCreationQuery = `
+CREATE TABLE IF NOT EXISTS episodes (
+	id SERIAL PRIMARY KEY,
+	name VARCHAR(500) NOT NULL,
+	magnet VARCHAR(500),
+	url VARCHAR(500),
+	CONSTRAINT require_magnet_or_url CHECK (
+		(case when magnet is null or length(magnet) = 0 then 0 else 1 end)
+		<> 
+		(case when url is null or length(url) = 0 then 0 else 1 end)
+	)
 )`

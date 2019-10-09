@@ -30,28 +30,40 @@ func (a *App) Initialize(dbHost, dbPort, dbUser, dbPassword, dbName string) {
 }
 
 func (a *App) initializeRoutes() {
-	a.Router.HandleFunc("/products", a.getProducts).Methods("GET")
-	a.Router.HandleFunc("/product/{id:[0-9]+}", a.getProduct).Methods("GET")
+	a.Router.HandleFunc("/episodes", a.getEpisodesList).Methods("GET")
+	a.Router.HandleFunc("/episodes", a.createEpisode).Methods("POST")
 }
 
-func (a *App) getProducts(w http.ResponseWriter, r *http.Request) {
-	products, err := getProducts(a.DB, 0, 10)
+func (a *App) getEpisodesList(w http.ResponseWriter, r *http.Request) {
+	episodes, err := getEpisodesList(a.DB, 0, 10)
 	if err != nil {
 		return
 	}
-	respondWithJSON(w, http.StatusOK, products)
+	respondWithJSON(w, http.StatusOK, episodes)
 }
 
-func (a *App) getProduct(w http.ResponseWriter, r *http.Request) {
-	respondWithError(w, http.StatusNotFound, "Product not found")
-	return
+func (a *App) createEpisode(w http.ResponseWriter, r *http.Request) {
+	var e episode
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&e); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	defer r.Body.Close()
+
+	if err := e.createEpisode(a.DB); err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	respondWithJSON(w, http.StatusCreated, e)
+
 }
 
 func (a *App) Run(addr string) {}
 
 func respondWithError(w http.ResponseWriter, code int, message string) {
 	respondWithJSON(w, code, map[string]string{"error": message})
-
 }
 
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {

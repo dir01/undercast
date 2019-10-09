@@ -2,46 +2,43 @@ package main
 
 import (
 	"database/sql"
-	"errors"
 )
 
-type product struct {
-	ID    int     `json:"id"`
-	Name  string  `json:"name"`
-	Price float64 `json:"price"`
+type episode struct {
+	ID     int    `json:"id"`
+	Name   string `json:"name"`
+	Magnet string `json:"magnet"`
+	URL    string `json:"url"`
 }
 
-func (p *product) getProduct(db *sql.DB) error {
-	return errors.New("Not implemented")
+func (e *episode) createEpisode(db *sql.DB) error {
+	err := db.QueryRow(
+		"INSERT INTO episodes(name, magnet, url) VALUES($1, $2, $3) RETURNING id",
+		e.Name, e.Magnet, e.URL,
+	).Scan(&e.ID)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func (p *product) updateProduct(db *sql.DB) error {
-	return errors.New("Not implemented")
-}
-
-func (p *product) deleteProduct(db *sql.DB) error {
-	return errors.New("Not implemented")
-}
-
-func (p *product) createProduct(db *sql.DB) error {
-	return errors.New("Not implemented")
-}
-
-func getProducts(db *sql.DB, start, count int) ([]product, error) {
-	rows, err := db.Query("SELECT id, name, price FROM products LIMIT $1 OFFSET $2", count, start)
+func getEpisodesList(db *sql.DB, start, count int) ([]episode, error) {
+	rows, err := db.Query("SELECT id, name, magnet, url FROM episodes LIMIT $1 OFFSET $2", count, start)
 	if err != nil {
 		return nil, err
 	}
 
 	defer rows.Close()
 
-	products := []product{}
+	episodes := []episode{}
 	for rows.Next() {
-		var p product
-		if err := rows.Scan(&p.ID, &p.Name, &p.Price); err != nil {
+		var e episode
+		if err := rows.Scan(&e.ID, &e.Name, &e.Magnet, &e.URL); err != nil {
 			return nil, err
 		}
-		products = append(products, p)
+		episodes = append(episodes, e)
 	}
-	return products, nil
+	return episodes, nil
 }
