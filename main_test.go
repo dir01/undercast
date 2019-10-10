@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -78,6 +79,21 @@ func TestFailToCreateEpisode(t *testing.T) {
 	checkResponseBody(t, response, `{"error":"pq: new row for relation \"episodes\" violates check constraint \"require_magnet_or_url\""}`)
 }
 
+func TestDeleteEpisode(t *testing.T) {
+	clearTable()
+	id := insertEpisode()
+
+	req, _ := http.NewRequest("DELETE", fmt.Sprintf("/episodes/%d", id), nil)
+	response := executeRequest(req)
+
+	checkResponseCode(t, response, http.StatusOK)
+
+	req, _ = http.NewRequest("GET", "/episodes", nil)
+	response = executeRequest(req)
+	checkResponseCode(t, response, http.StatusOK)
+	checkResponseBody(t, response, `[]`)
+}
+
 func executeRequest(req *http.Request) *httptest.ResponseRecorder {
 	rr := httptest.NewRecorder()
 	a.Router.ServeHTTP(rr, req)
@@ -98,10 +114,13 @@ func checkResponseBody(t *testing.T, response *httptest.ResponseRecorder, expect
 	}
 }
 
-func createTable() {
-	if _, err := a.DB.Exec(tableCreationQuery); err != nil {
+func insertEpisode() int {
+	var id int
+	err := a.DB.QueryRow("INSERT INTO episodes (name, magnet) VALUES ($1, $2) RETURNING id", "Some name", "Some magnet").Scan(&id)
+	if err != nil {
 		log.Fatal(err)
 	}
+	return id
 }
 
 func clearTable() {
@@ -111,6 +130,12 @@ func clearTable() {
 
 func dropTable() {
 	a.DB.Exec("DROP TABLE episodes")
+}
+
+func createTable() {
+	if _, err := a.DB.Exec(tableCreationQuery); err != nil {
+		log.Fatal(err)
+	}
 }
 
 const tableCreationQuery = `

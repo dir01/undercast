@@ -24,6 +24,11 @@ func (e *episode) createEpisode(db *sql.DB) error {
 	return nil
 }
 
+func (e *episode) deleteEpisode(db *sql.DB) error {
+	_, err := db.Exec(`DELETE FROM episodes WHERE id=$1`, e.ID)
+	return err
+}
+
 func getEpisodesList(db *sql.DB, start, count int) ([]episode, error) {
 	rows, err := db.Query("SELECT id, name, magnet, url FROM episodes LIMIT $1 OFFSET $2", count, start)
 	if err != nil {
