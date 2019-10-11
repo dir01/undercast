@@ -94,6 +94,20 @@ func TestDeleteEpisode(t *testing.T) {
 	checkResponseBody(t, response, `[]`)
 }
 
+func TestDeleteFailsIfNoEpisode(t *testing.T) {
+	req, _ := http.NewRequest("DELETE", "/episodes/100", nil)
+	response := executeRequest(req)
+
+	checkResponseCode(t, response, http.StatusNotFound)
+}
+
+func TestDeleteFailsIfWrongId(t *testing.T) {
+	req, _ := http.NewRequest("DELETE", "/episodes/99999999999999999999999999999", nil)
+	response := executeRequest(req)
+
+	checkResponseCode(t, response, http.StatusBadRequest)
+}
+
 func executeRequest(req *http.Request) *httptest.ResponseRecorder {
 	rr := httptest.NewRecorder()
 	a.Router.ServeHTTP(rr, req)

@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 )
 
 type episode struct {
@@ -25,8 +26,15 @@ func (e *episode) createEpisode(db *sql.DB) error {
 }
 
 func (e *episode) deleteEpisode(db *sql.DB) error {
-	_, err := db.Exec(`DELETE FROM episodes WHERE id=$1`, e.ID)
-	return err
+	if res, err := db.Exec(`DELETE FROM episodes WHERE id=$1`, e.ID); err != nil {
+		return err
+	} else if count, err := res.RowsAffected(); err != nil {
+		return err
+	} else if count == 0 {
+		return errors.New("Not found")
+	} else {
+		return nil
+	}
 }
 
 func getEpisodesList(db *sql.DB, start, count int) ([]episode, error) {

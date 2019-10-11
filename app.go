@@ -70,13 +70,13 @@ func (a *App) deleteEpisode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	e := episode{ID: id}
-	if err := e.deleteEpisode(a.DB); err != nil {
+	if err := e.deleteEpisode(a.DB); err == nil {
+		respondWithJSON(w, http.StatusOK, map[string]string{"result": "success"})
+	} else if err.Error() == "Not found" {
+		respondWithError(w, http.StatusNotFound, err.Error())
+	} else {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
-		return
 	}
-
-	respondWithJSON(w, http.StatusOK, map[string]string{"result": "success"})
-
 }
 
 func (a *App) Run(addr string) {}
