@@ -1,12 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"os"
 )
 
 func main() {
-	fmt.Println("Hellp")
 	a := App{}
 	a.Initialize(
 		os.Getenv("DB_HOST"),

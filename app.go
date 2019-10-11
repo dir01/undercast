@@ -12,22 +12,22 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// App is dealing with podcast episodes CRUD API, scheduling episodes processing task and publishing resulting files as episodes once processing is finished
 type App struct {
 	Router *mux.Router
 	DB     *sql.DB
 }
 
+// Initialize sets up database connection and routes
 func (a *App) Initialize(dbHost, dbPort, dbUser, dbPassword, dbName string) {
-	connectionString :=
-		fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", dbUser, dbPassword, dbHost, dbName)
-	var err error
-	a.DB, err = sql.Open("postgres", connectionString)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	a.initializeDatabase(dbHost, dbPort, dbUser, dbPassword, dbName)
 	a.Router = mux.NewRouter()
 	a.initializeRoutes()
+}
+
+// Run makes app serve requests
+func (a *App) Run(addr string) {
+	log.Fatal(http.ListenAndServe(addr, a.Router))
 }
 
 func (a *App) initializeRoutes() {
@@ -39,8 +39,10 @@ func (a *App) initializeRoutes() {
 func (a *App) getEpisodesList(w http.ResponseWriter, r *http.Request) {
 	episodes, err := getEpisodesList(a.DB, 0, 10)
 	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	respondWithJSON(w, http.StatusOK, episodes)
 }
 
@@ -79,7 +81,33 @@ func (a *App) deleteEpisode(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (a *App) Run(addr string) {}
+func (a *App) initializeDatabase(host, port, user, password, dbName string) {
+	connectionString :=
+		fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", user, password, host, dbName)
+	fmt.Println(connectionString)
+	var err error
+	a.DB, err = sql.Open("postgres", connectionString)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	const tableCreationQuery = `
+CREATE TABLE IF NOT EXISTS episodes (
+	id SERIAL PRIMARY KEY,
+	name VARCHAR(500) NOT NULL,
+	magnet VARCHAR(500),
+	url VARCHAR(500),
+	CONSTRAINT require_magnet_or_url CHECK (
+		(case when magnet is null or length(magnet) = 0 then 0 else 1 end)
+		<> 
+		(case when url is null or length(url) = 0 then 0 else 1 end)
+	)
+)`
+	if _, err := a.DB.Exec(tableCreationQuery); err != nil {
+		log.Fatal(err)
+	}
+
+}
 
 func respondWithError(w http.ResponseWriter, code int, message string) {
 	respondWithJSON(w, code, map[string]string{"error": message})

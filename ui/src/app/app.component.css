@@ -1,0 +1,9 @@
+#episodes {
+    display: flex;
+    justify-content: center;
+}
+
+#episodes__add {
+    display: flex;
+    flex-direction: column;
+}
