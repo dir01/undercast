@@ -32,7 +32,7 @@ func TestMain(m *testing.M) {
 func TestEmptyTable(t *testing.T) {
 	clearTable()
 
-	req, _ := http.NewRequest("GET", "/episodes", nil)
+	req, _ := http.NewRequest("GET", "/api/episodes", nil)
 	response := executeRequest(req)
 
 	checkResponseCode(t, response, http.StatusOK)
@@ -45,7 +45,7 @@ func TestCreateEpisodeWithMagnet(t *testing.T) {
 		"name": "Around the world in 80 days",
 		"magnet": "magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c"
 	}`)
-	req, _ := http.NewRequest("POST", "/episodes", bytes.NewBuffer(payload))
+	req, _ := http.NewRequest("POST", "/api/episodes", bytes.NewBuffer(payload))
 	response := executeRequest(req)
 
 	checkResponseCode(t, response, http.StatusCreated)
@@ -59,7 +59,7 @@ func TestCreateEpisodeWithUrl(t *testing.T) {
 		"name": "Around the world in 80 days",
 		"url": "http://legittorrents.info/download.php?id=1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c"
 	}`)
-	req, _ := http.NewRequest("POST", "/episodes", bytes.NewBuffer(payload))
+	req, _ := http.NewRequest("POST", "/api/episodes", bytes.NewBuffer(payload))
 	response := executeRequest(req)
 
 	checkResponseCode(t, response, http.StatusCreated)
@@ -72,7 +72,7 @@ func TestFailToCreateEpisode(t *testing.T) {
 	payload := []byte(`{
 		"name": "Around the world in 80 days"
 	}`)
-	req, _ := http.NewRequest("POST", "/episodes", bytes.NewBuffer(payload))
+	req, _ := http.NewRequest("POST", "/api/episodes", bytes.NewBuffer(payload))
 	response := executeRequest(req)
 
 	checkResponseCode(t, response, http.StatusInternalServerError)
@@ -83,26 +83,26 @@ func TestDeleteEpisode(t *testing.T) {
 	clearTable()
 	id := insertEpisode()
 
-	req, _ := http.NewRequest("DELETE", fmt.Sprintf("/episodes/%d", id), nil)
+	req, _ := http.NewRequest("DELETE", fmt.Sprintf("/api/episodes/%d", id), nil)
 	response := executeRequest(req)
 
 	checkResponseCode(t, response, http.StatusOK)
 
-	req, _ = http.NewRequest("GET", "/episodes", nil)
+	req, _ = http.NewRequest("GET", "/api/episodes", nil)
 	response = executeRequest(req)
 	checkResponseCode(t, response, http.StatusOK)
 	checkResponseBody(t, response, `[]`)
 }
 
 func TestDeleteFailsIfNoEpisode(t *testing.T) {
-	req, _ := http.NewRequest("DELETE", "/episodes/100", nil)
+	req, _ := http.NewRequest("DELETE", "/api/episodes/100", nil)
 	response := executeRequest(req)
 
 	checkResponseCode(t, response, http.StatusNotFound)
 }
 
 func TestDeleteFailsIfWrongId(t *testing.T) {
-	req, _ := http.NewRequest("DELETE", "/episodes/99999999999999999999999999999", nil)
+	req, _ := http.NewRequest("DELETE", "/api/episodes/99999999999999999999999999999", nil)
 	response := executeRequest(req)
 
 	checkResponseCode(t, response, http.StatusBadRequest)

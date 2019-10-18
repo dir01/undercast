@@ -31,9 +31,10 @@ func (a *App) Run(addr string) {
 }
 
 func (a *App) initializeRoutes() {
-	a.Router.HandleFunc("/episodes", a.getEpisodesList).Methods("GET")
-	a.Router.HandleFunc("/episodes", a.createEpisode).Methods("POST")
-	a.Router.HandleFunc("/episodes/{id:[0-9]+}", a.deleteEpisode).Methods("DELETE")
+	a.Router.HandleFunc("/api/episodes", a.getEpisodesList).Methods("GET")
+	a.Router.HandleFunc("/api/episodes", a.createEpisode).Methods("POST")
+	a.Router.HandleFunc("/api/episodes/{id:[0-9]+}", a.deleteEpisode).Methods("DELETE")
+	a.Router.PathPrefix("/").Handler(http.FileServer(http.Dir("./ui/dist/tcaster/")))
 }
 
 func (a *App) getEpisodesList(w http.ResponseWriter, r *http.Request) {
