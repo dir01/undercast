@@ -5,18 +5,18 @@ import (
 	"errors"
 )
 
-type episode struct {
+type torrent struct {
 	ID     int    `json:"id"`
 	Name   string `json:"name"`
 	Magnet string `json:"magnet"`
 	URL    string `json:"url"`
 }
 
-func (e *episode) createEpisode(db *sql.DB) error {
+func (t *torrent) createTorrent(db *sql.DB) error {
 	err := db.QueryRow(
-		"INSERT INTO episodes(name, magnet, url) VALUES($1, $2, $3) RETURNING id",
-		e.Name, e.Magnet, e.URL,
-	).Scan(&e.ID)
+		"INSERT INTO torrents(name, magnet, url) VALUES($1, $2, $3) RETURNING id",
+		t.Name, t.Magnet, t.URL,
+	).Scan(&t.ID)
 
 	if err != nil {
 		return err
@@ -25,8 +25,8 @@ func (e *episode) createEpisode(db *sql.DB) error {
 	return nil
 }
 
-func (e *episode) deleteEpisode(db *sql.DB) error {
-	if res, err := db.Exec(`DELETE FROM episodes WHERE id=$1`, e.ID); err != nil {
+func (t *torrent) deleteTorrent(db *sql.DB) error {
+	if res, err := db.Exec(`DELETE FROM torrents WHERE id=$1`, t.ID); err != nil {
 		return err
 	} else if count, err := res.RowsAffected(); err != nil {
 		return err
@@ -37,21 +37,21 @@ func (e *episode) deleteEpisode(db *sql.DB) error {
 	}
 }
 
-func getEpisodesList(db *sql.DB, start, count int) ([]episode, error) {
-	rows, err := db.Query("SELECT id, name, magnet, url FROM episodes LIMIT $1 OFFSET $2", count, start)
+func getTorrentsList(db *sql.DB, start, count int) ([]torrent, error) {
+	rows, err := db.Query("SELECT id, name, magnet, url FROM torrents LIMIT $1 OFFSET $2", count, start)
 	if err != nil {
 		return nil, err
 	}
 
 	defer rows.Close()
 
-	episodes := []episode{}
+	torrents := []torrent{}
 	for rows.Next() {
-		var e episode
-		if err := rows.Scan(&e.ID, &e.Name, &e.Magnet, &e.URL); err != nil {
+		var t torrent
+		if err := rows.Scan(&t.ID, &t.Name, &t.Magnet, &t.URL); err != nil {
 			return nil, err
 		}
-		episodes = append(episodes, e)
+		torrents = append(torrents, t)
 	}
-	return episodes, nil
+	return torrents, nil
 }

@@ -12,7 +12,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-// App is dealing with podcast episodes CRUD API, scheduling episodes processing task and publishing resulting files as episodes once processing is finished
+// App is dealing with podcast torrents CRUD API, scheduling torrents processing task and publishing resulting files as torrents once processing is finished
 type App struct {
 	Router *mux.Router
 	DB     *sql.DB
@@ -33,53 +33,53 @@ func (a *App) Run(addr string) {
 }
 
 func (a *App) initializeRoutes() {
-	a.Router.HandleFunc("/api/episodes", a.getEpisodesList()).Methods("GET")
-	a.Router.HandleFunc("/api/episodes", a.createEpisode()).Methods("POST")
-	a.Router.HandleFunc("/api/episodes/{id:[0-9]+}", a.deleteEpisode()).Methods("DELETE")
+	a.Router.HandleFunc("/api/torrents", a.getTorrentsList()).Methods("GET")
+	a.Router.HandleFunc("/api/torrents", a.createTorrent()).Methods("POST")
+	a.Router.HandleFunc("/api/torrents/{id:[0-9]+}", a.deleteTorrent()).Methods("DELETE")
 	a.Router.PathPrefix("/").Handler(http.FileServer(http.Dir("./ui/dist/tcaster/")))
 }
 
-func (a *App) getEpisodesList() http.HandlerFunc {
+func (a *App) getTorrentsList() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		episodes, err := getEpisodesList(a.DB, 0, 10)
+		torrents, err := getTorrentsList(a.DB, 0, 10)
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		respondWithJSON(w, http.StatusOK, episodes)
+		respondWithJSON(w, http.StatusOK, torrents)
 	}
 }
 
-func (a *App) createEpisode() http.HandlerFunc {
+func (a *App) createTorrent() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var e episode
+		var t torrent
 		decoder := json.NewDecoder(r.Body)
-		if err := decoder.Decode(&e); err != nil {
+		if err := decoder.Decode(&t); err != nil {
 			respondWithError(w, http.StatusBadRequest, "Invalid request payload")
 			return
 		}
 		defer r.Body.Close()
 
-		if err := e.createEpisode(a.DB); err != nil {
+		if err := t.createTorrent(a.DB); err != nil {
 			respondWithError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 
-		respondWithJSON(w, http.StatusCreated, e)
+		respondWithJSON(w, http.StatusCreated, t)
 	}
 }
 
-func (a *App) deleteEpisode() http.HandlerFunc {
+func (a *App) deleteTorrent() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id, err := strconv.Atoi(vars["id"])
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "Invalid episode id")
+			respondWithError(w, http.StatusBadRequest, "Invalid torrent id")
 			return
 		}
 
-		e := episode{ID: id}
-		if err := e.deleteEpisode(a.DB); err == nil {
+		t := torrent{ID: id}
+		if err := t.deleteTorrent(a.DB); err == nil {
 			respondWithJSON(w, http.StatusOK, map[string]string{"result": "success"})
 		} else if err.Error() == "Not found" {
 			respondWithError(w, http.StatusNotFound, err.Error())
@@ -101,7 +101,7 @@ func (a *App) initializeDatabase(host, port, user, password, dbName string) {
 	}
 
 	const tableCreationQuery = `
-CREATE TABLE IF NOT EXISTS episodes (
+CREATE TABLE IF NOT EXISTS torrents (
 	id SERIAL PRIMARY KEY,
 	name VARCHAR(500) NOT NULL,
 	magnet VARCHAR(500),

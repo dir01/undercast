@@ -29,18 +29,18 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func TestListEpisodes(t *testing.T) {
+func TestListTorrents(t *testing.T) {
 	t.Run("empty table results in empty array", func(t *testing.T) {
 		clearTable()
 
-		req, _ := http.NewRequest("GET", "/api/episodes", nil)
+		req, _ := http.NewRequest("GET", "/api/torrents", nil)
 		response := executeRequest(req)
 
 		checkResponseStatusCode(t, response, http.StatusOK)
 	})
 }
 
-func TestCreateEpisode(t *testing.T) {
+func TestCreateTorrent(t *testing.T) {
 	t.Run("with magnet", func(t *testing.T) {
 		clearTable()
 
@@ -48,7 +48,7 @@ func TestCreateEpisode(t *testing.T) {
 		"name": "Around the world in 80 days",
 		"magnet": "magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c"
 	}`)
-		req, _ := http.NewRequest("POST", "/api/episodes", bytes.NewBuffer(payload))
+		req, _ := http.NewRequest("POST", "/api/torrents", bytes.NewBuffer(payload))
 		response := executeRequest(req)
 
 		checkResponseStatusCode(t, response, http.StatusCreated)
@@ -62,7 +62,7 @@ func TestCreateEpisode(t *testing.T) {
 		"name": "Around the world in 80 days",
 		"url": "http://legittorrents.info/download.php?id=1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c"
 		}`)
-		req, _ := http.NewRequest("POST", "/api/episodes", bytes.NewBuffer(payload))
+		req, _ := http.NewRequest("POST", "/api/torrents", bytes.NewBuffer(payload))
 		response := executeRequest(req)
 
 		checkResponseStatusCode(t, response, http.StatusCreated)
@@ -71,40 +71,40 @@ func TestCreateEpisode(t *testing.T) {
 
 	t.Run("fails to create without magnet or url", func(t *testing.T) {
 		payload := []byte(`{ "name": "Around the world in 80 days" }`)
-		req, _ := http.NewRequest("POST", "/api/episodes", bytes.NewBuffer(payload))
+		req, _ := http.NewRequest("POST", "/api/torrents", bytes.NewBuffer(payload))
 		response := executeRequest(req)
 
 		checkResponseStatusCode(t, response, http.StatusInternalServerError)
-		checkResponseBody(t, response, `{"error":"pq: new row for relation \"episodes\" violates check constraint \"require_magnet_or_url\""}`)
+		checkResponseBody(t, response, `{"error":"pq: new row for relation \"torrents\" violates check constraint \"require_magnet_or_url\""}`)
 	})
 }
 
-func TestDeleteEpisode(t *testing.T) {
+func TestDeleteTorrent(t *testing.T) {
 	t.Run("successful deletion", func(t *testing.T) {
 		clearTable()
-		id := insertEpisode()
+		id := insertTorrent()
 
-		req, _ := http.NewRequest("DELETE", fmt.Sprintf("/api/episodes/%d", id), nil)
+		req, _ := http.NewRequest("DELETE", fmt.Sprintf("/api/torrents/%d", id), nil)
 		response := executeRequest(req)
 
 		checkResponseStatusCode(t, response, http.StatusOK)
 
-		req, _ = http.NewRequest("GET", "/api/episodes", nil)
+		req, _ = http.NewRequest("GET", "/api/torrents", nil)
 		response = executeRequest(req)
 
 		checkResponseStatusCode(t, response, http.StatusOK)
 		checkResponseBody(t, response, `[]`)
 	})
 
-	t.Run("fails if no episode", func(t *testing.T) {
-		req, _ := http.NewRequest("DELETE", "/api/episodes/100", nil)
+	t.Run("fails if no torrent", func(t *testing.T) {
+		req, _ := http.NewRequest("DELETE", "/api/torrents/100", nil)
 		response := executeRequest(req)
 
 		checkResponseStatusCode(t, response, http.StatusNotFound)
 	})
 
 	t.Run("fails if wrong id", func(t *testing.T) {
-		req, _ := http.NewRequest("DELETE", "/api/episodes/99999999999999999999999999999", nil)
+		req, _ := http.NewRequest("DELETE", "/api/torrents/99999999999999999999999999999", nil)
 		response := executeRequest(req)
 
 		checkResponseStatusCode(t, response, http.StatusBadRequest)
@@ -132,9 +132,9 @@ func checkResponseBody(t *testing.T, response *httptest.ResponseRecorder, expect
 	}
 }
 
-func insertEpisode() int {
+func insertTorrent() int {
 	var id int
-	err := a.DB.QueryRow("INSERT INTO episodes (name, magnet) VALUES ($1, $2) RETURNING id", "Some name", "Some magnet").Scan(&id)
+	err := a.DB.QueryRow("INSERT INTO torrents (name, magnet) VALUES ($1, $2) RETURNING id", "Some name", "Some magnet").Scan(&id)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -142,10 +142,10 @@ func insertEpisode() int {
 }
 
 func clearTable() {
-	a.DB.Exec("DELETE FROM episodes")
-	a.DB.Exec("ALTER SEQUENCE episodes_id_seq RESTART WITH 1")
+	a.DB.Exec("DELETE FROM torrents")
+	a.DB.Exec("ALTER SEQUENCE torrents_id_seq RESTART WITH 1")
 }
 
 func dropTable() {
-	a.DB.Exec("DROP TABLE episodes")
+	a.DB.Exec("DROP TABLE torrents")
 }
