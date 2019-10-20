@@ -3,9 +3,9 @@ services:
   postgres:
     image: postgres
     environment:
-      POSTGRES_USER: 'torrentCaster'
-      POSTGRES_PASSWORD: 'password'
-      POSTGRES_DB: 'torrentCaster'
+      POSTGRES_USER: 'undercast'
+      POSTGRES_PASSWORD: 'undercast'
+      POSTGRES_DB: 'undercast'
     ports:
       - '5432:5432'
     restart: always

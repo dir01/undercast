@@ -15,11 +15,12 @@ var a App
 func TestMain(m *testing.M) {
 	a = App{}
 	a.Initialize(
-		os.Getenv("TEST_DB_HOST"),
-		os.Getenv("TEST_DB_PORT"),
-		os.Getenv("TEST_DB_USERNAME"),
-		os.Getenv("TEST_DB_PASSWORD"),
-		os.Getenv("TEST_DB_NAME"))
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_PORT"),
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_NAME"),
+	)
 	createTable()
 
 	code := m.Run()

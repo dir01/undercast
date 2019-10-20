@@ -1,4 +1,4 @@
-module torrentCaster
+module undercast
 
 go 1.13
 
