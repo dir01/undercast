@@ -20,6 +20,7 @@ type App struct {
 
 // Initialize sets up database connection and routes
 func (a *App) Initialize(dbHost, dbPort, dbUser, dbPassword, dbName string) {
+	log.Println("Initializing app")
 	a.initializeDatabase(dbHost, dbPort, dbUser, dbPassword, dbName)
 	a.Router = mux.NewRouter()
 	a.initializeRoutes()
@@ -27,65 +28,72 @@ func (a *App) Initialize(dbHost, dbPort, dbUser, dbPassword, dbName string) {
 
 // Run makes app serve requests
 func (a *App) Run(addr string) {
+	log.Println("Serving at address " + addr)
 	log.Fatal(http.ListenAndServe(addr, a.Router))
 }
 
 func (a *App) initializeRoutes() {
-	a.Router.HandleFunc("/api/episodes", a.getEpisodesList).Methods("GET")
-	a.Router.HandleFunc("/api/episodes", a.createEpisode).Methods("POST")
-	a.Router.HandleFunc("/api/episodes/{id:[0-9]+}", a.deleteEpisode).Methods("DELETE")
+	a.Router.HandleFunc("/api/episodes", a.getEpisodesList()).Methods("GET")
+	a.Router.HandleFunc("/api/episodes", a.createEpisode()).Methods("POST")
+	a.Router.HandleFunc("/api/episodes/{id:[0-9]+}", a.deleteEpisode()).Methods("DELETE")
 	a.Router.PathPrefix("/").Handler(http.FileServer(http.Dir("./ui/dist/tcaster/")))
 }
 
-func (a *App) getEpisodesList(w http.ResponseWriter, r *http.Request) {
-	episodes, err := getEpisodesList(a.DB, 0, 10)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err.Error())
-		return
+func (a *App) getEpisodesList() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		episodes, err := getEpisodesList(a.DB, 0, 10)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		respondWithJSON(w, http.StatusOK, episodes)
 	}
-
-	respondWithJSON(w, http.StatusOK, episodes)
 }
 
-func (a *App) createEpisode(w http.ResponseWriter, r *http.Request) {
-	var e episode
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&e); err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-	defer r.Body.Close()
+func (a *App) createEpisode() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var e episode
+		decoder := json.NewDecoder(r.Body)
+		if err := decoder.Decode(&e); err != nil {
+			respondWithError(w, http.StatusBadRequest, "Invalid request payload")
+			return
+		}
+		defer r.Body.Close()
 
-	if err := e.createEpisode(a.DB); err != nil {
-		respondWithError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
+		if err := e.createEpisode(a.DB); err != nil {
+			respondWithError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 
-	respondWithJSON(w, http.StatusCreated, e)
+		respondWithJSON(w, http.StatusCreated, e)
+	}
 }
 
-func (a *App) deleteEpisode(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id, err := strconv.Atoi(vars["id"])
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid episode id")
-		return
-	}
+func (a *App) deleteEpisode() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		id, err := strconv.Atoi(vars["id"])
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, "Invalid episode id")
+			return
+		}
 
-	e := episode{ID: id}
-	if err := e.deleteEpisode(a.DB); err == nil {
-		respondWithJSON(w, http.StatusOK, map[string]string{"result": "success"})
-	} else if err.Error() == "Not found" {
-		respondWithError(w, http.StatusNotFound, err.Error())
-	} else {
-		respondWithError(w, http.StatusInternalServerError, err.Error())
+		e := episode{ID: id}
+		if err := e.deleteEpisode(a.DB); err == nil {
+			respondWithJSON(w, http.StatusOK, map[string]string{"result": "success"})
+		} else if err.Error() == "Not found" {
+			respondWithError(w, http.StatusNotFound, err.Error())
+		} else {
+			respondWithError(w, http.StatusInternalServerError, err.Error())
+		}
 	}
 }
 
 func (a *App) initializeDatabase(host, port, user, password, dbName string) {
 	connectionString :=
 		fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", user, password, host, dbName)
-	fmt.Println(connectionString)
+	log.Println("Initializing DB: ", connectionString)
+
 	var err error
 	a.DB, err = sql.Open("postgres", connectionString)
 	if err != nil {
@@ -107,7 +115,6 @@ CREATE TABLE IF NOT EXISTS episodes (
 	if _, err := a.DB.Exec(tableCreationQuery); err != nil {
 		log.Fatal(err)
 	}
-
 }
 
 func respondWithError(w http.ResponseWriter, code int, message string) {
