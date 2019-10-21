@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"database/sql"
@@ -12,10 +12,26 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// TorrentState describes state of a single torrent download
+type TorrentState struct {
+	Name           string
+	FileNames      []string
+	BytesCompleted int64
+	BytesMissing   int64
+	Done           bool
+}
+
+// TorrentClient allows to download torrents and to subscribe on its state changes
+type TorrentClient interface {
+	AddTorrent(id int, magnetOrTorrentOrLink string) error
+	OnTorrentChanged(func(id int, info TorrentState))
+}
+
 // App is dealing with podcast torrents CRUD API, scheduling torrents processing task and publishing resulting files as torrents once processing is finished
 type App struct {
-	Router *mux.Router
-	DB     *sql.DB
+	Router  *mux.Router
+	DB      *sql.DB
+	Torrent TorrentClient
 }
 
 // Initialize sets up database connection and routes
@@ -65,6 +81,11 @@ func (a *App) createTorrent() http.HandlerFunc {
 			return
 		}
 
+		if t.Magnet != "" {
+			a.Torrent.AddTorrent(t.ID, t.Magnet)
+		} else if t.URL != "" {
+			a.Torrent.AddTorrent(t.ID, t.URL)
+		}
 		respondWithJSON(w, http.StatusCreated, t)
 	}
 }

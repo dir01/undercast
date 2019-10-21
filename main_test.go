@@ -8,12 +8,13 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"undercast/server"
 )
 
-var a App
+var a *server.App
 
 func TestMain(m *testing.M) {
-	a = App{}
+	a = &server.App{}
 	a.Initialize(
 		os.Getenv("DB_HOST"),
 		os.Getenv("DB_PORT"),
@@ -25,7 +26,6 @@ func TestMain(m *testing.M) {
 	code := m.Run()
 
 	dropTable()
-
 	os.Exit(code)
 }
 
@@ -43,6 +43,7 @@ func TestListTorrents(t *testing.T) {
 func TestCreateTorrent(t *testing.T) {
 	t.Run("with magnet", func(t *testing.T) {
 		clearTable()
+		tor := setupTorrentMock(a)
 
 		payload := []byte(`{
 		"name": "Around the world in 80 days",
@@ -53,10 +54,14 @@ func TestCreateTorrent(t *testing.T) {
 
 		checkResponseStatusCode(t, response, http.StatusCreated)
 		checkResponseBody(t, response, `{"id":1,"name":"Around the world in 80 days","magnet":"magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c","url":""}`)
+		if tor.id != 1 || tor.source != "magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c" {
+			t.Errorf("Magnet link not added to torrent client")
+		}
 	})
 
 	t.Run("with url", func(t *testing.T) {
 		clearTable()
+		tor := setupTorrentMock(a)
 
 		payload := []byte(`{
 		"name": "Around the world in 80 days",
@@ -67,9 +72,13 @@ func TestCreateTorrent(t *testing.T) {
 
 		checkResponseStatusCode(t, response, http.StatusCreated)
 		checkResponseBody(t, response, `{"id":1,"name":"Around the world in 80 days","magnet":"","url":"http://legittorrents.info/download.php?id=1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c"}`)
+		if tor.id != 1 || tor.source != "http://legittorrents.info/download.php?id=1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c" {
+			t.Errorf("Torrent URL not added to torrent client")
+		}
+
 	})
 
-	t.Run("fails to create without magnet or url", func(t *testing.T) {
+	t.Run("fails to create without source or url", func(t *testing.T) {
 		payload := []byte(`{ "name": "Around the world in 80 days" }`)
 		req, _ := http.NewRequest("POST", "/api/torrents", bytes.NewBuffer(payload))
 		response := executeRequest(req)
@@ -148,4 +157,25 @@ func clearTable() {
 
 func dropTable() {
 	a.DB.Exec("DROP TABLE torrents")
+}
+
+type torrentMock struct {
+	id     int
+	source string
+}
+
+func setupTorrentMock(a *server.App) *torrentMock {
+	t := &torrentMock{}
+	a.Torrent = t
+	return t
+}
+
+func (t *torrentMock) AddTorrent(id int, source string) error {
+	t.id = id
+	t.source = source
+	return nil
+}
+
+func (t *torrentMock) OnTorrentChanged(callback func(id int, state server.TorrentState)) {
+
 }

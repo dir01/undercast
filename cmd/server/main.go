@@ -2,10 +2,11 @@ package main
 
 import (
 	"os"
+	"undercast/server"
 )
 
 func main() {
-	a := App{}
+	a := server.App{}
 	a.Initialize(
 		os.Getenv("DB_HOST"),
 		os.Getenv("DB_PORT"),
