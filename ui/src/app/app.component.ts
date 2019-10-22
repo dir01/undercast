@@ -8,7 +8,7 @@ import { Episode } from './services/classes/episodes';
   styleUrls: ['./app.component.css']
 })
 export class AppComponent {
-  title = 'tcaster';
+  title = 'undercast';
   episodes: Episode[] = [];
 
   constructor(private _episodesApiService: episodesApiService) { }
