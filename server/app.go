@@ -9,6 +9,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strconv"
+	"sync"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
@@ -32,20 +33,25 @@ type TorrentClient interface {
 
 // App is dealing with podcast torrents CRUD API, scheduling torrents processing task and publishing resulting files as torrents once processing is finished
 type App struct {
-	Router         *mux.Router
-	DB             *sql.DB
-	Repository     *repository
-	Torrent        TorrentClient
-	uiDevServerURL string
-	wsConnections  []*websocket.Conn
+	Router             *mux.Router
+	DB                 *sql.DB
+	Repository         *repository
+	Torrent            TorrentClient
+
+	uiDevServerURL     string
+	wsConnections      []*websocket.Conn
+	wsConnectionsMutex *sync.Mutex
 }
 
 // Initialize sets up database connection and routes
 func (a *App) Initialize(dbHost, dbPort, dbUser, dbPassword, dbName, uiDevServerURL string) {
 	a.uiDevServerURL = uiDevServerURL
+	a.wsConnectionsMutex = &sync.Mutex{}
+
 	log.Println("Initializing app")
 	a.initializeDatabase(dbHost, dbPort, dbUser, dbPassword, dbName)
 	a.Repository = newRepository(a.DB)
+	a.uiDevServerURL = uiDevServerURL
 	a.initializeRoutes()
 	a.setupTorrent()
 }
@@ -131,19 +137,27 @@ func (a *App) handleWebsocket() http.HandlerFunc {
 			log.Println(err)
 		}
 		log.Println("Websocket connection established")
+		a.wsConnectionsMutex.Lock()
 		a.wsConnections = append(a.wsConnections, ws)
+		a.wsConnectionsMutex.Unlock()
 	}
 }
 
 func (a *App) setupTorrent() {
 	a.Torrent.OnTorrentChanged(func(id int, state TorrentState) {
 		bytes, _ := json.Marshal(state)
+		a.wsConnectionsMutex.Lock()
+		i := 0
 		for _, ws := range a.wsConnections {
-			err := ws.WriteMessage(1, bytes)
-			if err != nil {
-				log.Println(err)
+			if err := ws.WriteMessage(1, bytes); err == nil {
+				a.wsConnections[i] = ws
+				i++
+			} else {
+				log.Println("Removing ws connections due to error:\n", err)
 			}
 		}
+		a.wsConnections = a.wsConnections[:i]
+		a.wsConnectionsMutex.Unlock()
 	})
 }
 
