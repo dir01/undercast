@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
-import { episodesApiService } from './services/episodesApi.service';
-import { Episode } from './services/classes/episodes';
+import { apiService } from './services/api.service';
+import { Torrent } from './services/classes/torrents';
 
 @Component({
   selector: 'app-root',
@@ -9,13 +9,22 @@ import { Episode } from './services/classes/episodes';
 })
 export class AppComponent {
   title = 'undercast';
-  episodes: Episode[] = [];
+  torrentList: Torrent[] = [];
+  torrent = new Torrent();
 
-  constructor(private _episodesApiService: episodesApiService) { }
+  constructor(private _apiService: apiService) {}
 
   ngOnInit() {
-    this._episodesApiService
-      .getEpisodesList()
-      .subscribe(data => { this.episodes = data })
+    this._apiService.getTorrentsList().subscribe(data => {
+      this.torrentList = data;
+    });
+  }
+
+  async addTorrent() {
+    console.log(this.torrent)
+    const savedTorrent = await this._apiService.addTorrent(this.torrent);
+    this.torrentList.push(savedTorrent);
+    console.log('Saved torrent: ', savedTorrent);
+    this.torrent = new Torrent();
   }
 }

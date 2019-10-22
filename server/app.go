@@ -17,11 +17,11 @@ import (
 
 // TorrentState describes state of a single torrent download
 type TorrentState struct {
-	Name           string
-	FileNames      []string
-	BytesCompleted int64
-	BytesMissing   int64
-	Done           bool
+	Name           string   `json:"name"`
+	FileNames      []string `json:"filenames"`
+	BytesCompleted int64    `json:"bytesCompleted"`
+	BytesMissing   int64    `json:"bytesMissing"`
+	Done           bool     `json:"done"`
 }
 
 // TorrentClient allows to download torrents and to subscribe on its state changes
@@ -36,15 +36,16 @@ type App struct {
 	DB             *sql.DB
 	Torrent        TorrentClient
 	uiDevServerURL string
+	wsConnections  []*websocket.Conn
 }
 
 // Initialize sets up database connection and routes
 func (a *App) Initialize(dbHost, dbPort, dbUser, dbPassword, dbName, uiDevServerURL string) {
-	log.Println("Initializing app")
 	a.uiDevServerURL = uiDevServerURL
+	log.Println("Initializing app")
 	a.initializeDatabase(dbHost, dbPort, dbUser, dbPassword, dbName)
-	a.Router = mux.NewRouter()
 	a.initializeRoutes()
+	a.setupTorrent()
 }
 
 // Run makes app serve requests
@@ -54,6 +55,7 @@ func (a *App) Run(addr string) {
 }
 
 func (a *App) initializeRoutes() {
+	a.Router = mux.NewRouter()
 	a.Router.HandleFunc("/api/torrents", a.getTorrentsList()).Methods("GET")
 	a.Router.HandleFunc("/api/torrents", a.createTorrent()).Methods("POST")
 	a.Router.HandleFunc("/api/torrents/{id:[0-9]+}", a.deleteTorrent()).Methods("DELETE")
@@ -128,11 +130,20 @@ func (a *App) handleWebsocket() http.HandlerFunc {
 			log.Println(err)
 		}
 		log.Println("Websocket connection established")
-		err = ws.WriteMessage(1, []byte("Hi Client!"))
-		if err != nil {
-			log.Println(err)
-		}
+		a.wsConnections = append(a.wsConnections, ws)
 	}
+}
+
+func (a *App) setupTorrent() {
+	a.Torrent.OnTorrentChanged(func(id int, state TorrentState) {
+		bytes, _ := json.Marshal(state)
+		for _, ws := range a.wsConnections {
+			err := ws.WriteMessage(1, bytes)
+			if err != nil {
+				log.Println(err)
+			}
+		}
+	})
 }
 
 func (a *App) initializeDatabase(host, port, user, password, dbName string) {

@@ -1,17 +1,16 @@
-<content id="episodes">
-  <form id="episodes__add">
+<content>
+  <form (submit)="addTorrent()" id="torrent-form">
     <mat-form-field>
-      <input matInput placeholder="Episode name" />
-    </mat-form-field>
-    <mat-form-field>
-      <input matInput placeholder="Magnet link" />
-    </mat-form-field>
-    <mat-form-field>
-      <input matInput placeholder="Torrent link" />
+      <input
+        name="magnet"
+        [(ngModel)]="torrent.magnet"
+        placeholder="Magnet or link to .torrent"
+        matInput
+      />
     </mat-form-field>
   </form>
 
-  <div *ngFor="let ep of episodesList" class="episodes__list">
-    {{ep | json}}
+  <div *ngFor="let t of torrentList" class="torrent__list">
+    {{ t | json }}
   </div>
 </content>

@@ -2,11 +2,16 @@ package main
 
 import (
 	"os"
+	"undercast/bittorrent"
 	"undercast/server"
 )
 
 func main() {
-	a := server.App{}
+	t, err := bittorrent.NewClient()
+	if err != nil {
+		panic("Failed to initialize bittorrent client:\n" + err.Error())
+	}
+	a := server.App{Torrent: t}
 	a.Initialize(
 		os.Getenv("DB_HOST"),
 		os.Getenv("DB_PORT"),

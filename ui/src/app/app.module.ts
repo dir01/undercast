@@ -5,20 +5,20 @@ import { HttpClientModule } from '@angular/common/http';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { MaterialModule } from './material/material.module';
-import { episodesApiService } from './services/episodesApi.service';
+import { apiService } from './services/api.service';
+import { FormsModule } from '@angular/forms';
 
 @NgModule({
-  declarations: [
-    AppComponent
-  ],
+  declarations: [AppComponent],
   imports: [
     BrowserModule,
     AppRoutingModule,
     BrowserAnimationsModule,
     MaterialModule,
-    HttpClientModule
+    HttpClientModule,
+    FormsModule
   ],
-  providers: [episodesApiService],
+  providers: [apiService],
   bootstrap: [AppComponent]
 })
-export class AppModule { }
+export class AppModule {}
