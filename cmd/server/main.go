@@ -13,6 +13,7 @@ func main() {
 		os.Getenv("DB_USER"),
 		os.Getenv("DB_PASSWORD"),
 		os.Getenv("DB_NAME"),
+		os.Getenv("UI_DEV_SERVER_URL"),
 	)
 	a.Run(":8080")
 }

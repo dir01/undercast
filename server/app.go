@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
-	_ "github.com/lib/pq"
+	_ "github.com/lib/pq" //
 )
 
 // TorrentState describes state of a single torrent download
@@ -30,14 +32,16 @@ type TorrentClient interface {
 
 // App is dealing with podcast torrents CRUD API, scheduling torrents processing task and publishing resulting files as torrents once processing is finished
 type App struct {
-	Router  *mux.Router
-	DB      *sql.DB
-	Torrent TorrentClient
+	Router         *mux.Router
+	DB             *sql.DB
+	Torrent        TorrentClient
+	uiDevServerURL string
 }
 
 // Initialize sets up database connection and routes
-func (a *App) Initialize(dbHost, dbPort, dbUser, dbPassword, dbName string) {
+func (a *App) Initialize(dbHost, dbPort, dbUser, dbPassword, dbName, uiDevServerURL string) {
 	log.Println("Initializing app")
+	a.uiDevServerURL = uiDevServerURL
 	a.initializeDatabase(dbHost, dbPort, dbUser, dbPassword, dbName)
 	a.Router = mux.NewRouter()
 	a.initializeRoutes()
@@ -54,7 +58,7 @@ func (a *App) initializeRoutes() {
 	a.Router.HandleFunc("/api/torrents", a.createTorrent()).Methods("POST")
 	a.Router.HandleFunc("/api/torrents/{id:[0-9]+}", a.deleteTorrent()).Methods("DELETE")
 	a.Router.HandleFunc("/api/ws", a.handleWebsocket())
-	a.Router.PathPrefix("/").Handler(http.FileServer(http.Dir("./ui/dist/tcaster/")))
+	a.Router.PathPrefix("/").Handler(a.getUIHandler())
 }
 
 func (a *App) getTorrentsList() http.HandlerFunc {
@@ -156,6 +160,19 @@ CREATE TABLE IF NOT EXISTS torrents (
 )`
 	if _, err := a.DB.Exec(tableCreationQuery); err != nil {
 		log.Fatal(err)
+	}
+}
+
+func (a *App) getUIHandler() http.Handler {
+	if a.uiDevServerURL == "" {
+		return http.FileServer(http.Dir("./ui/dist/undercast/"))
+	}
+
+	if url, err := url.ParseRequestURI(a.uiDevServerURL); err != nil {
+		panic("Failed to parse provided uiDevServerURL " + a.uiDevServerURL)
+	} else {
+		proxy := httputil.NewSingleHostReverseProxy(url)
+		return proxy
 	}
 }
 
