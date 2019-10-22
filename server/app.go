@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
 	_ "github.com/lib/pq"
 )
 
@@ -52,6 +53,7 @@ func (a *App) initializeRoutes() {
 	a.Router.HandleFunc("/api/torrents", a.getTorrentsList()).Methods("GET")
 	a.Router.HandleFunc("/api/torrents", a.createTorrent()).Methods("POST")
 	a.Router.HandleFunc("/api/torrents/{id:[0-9]+}", a.deleteTorrent()).Methods("DELETE")
+	a.Router.HandleFunc("/api/ws", a.handleWebsocket())
 	a.Router.PathPrefix("/").Handler(http.FileServer(http.Dir("./ui/dist/tcaster/")))
 }
 
@@ -106,6 +108,25 @@ func (a *App) deleteTorrent() http.HandlerFunc {
 			respondWithError(w, http.StatusNotFound, err.Error())
 		} else {
 			respondWithError(w, http.StatusInternalServerError, err.Error())
+		}
+	}
+}
+
+func (a *App) handleWebsocket() http.HandlerFunc {
+	var upgrader = websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+	}
+	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+	return func(w http.ResponseWriter, r *http.Request) {
+		ws, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Println(err)
+		}
+		log.Println("Websocket connection established")
+		err = ws.WriteMessage(1, []byte("Hi Client!"))
+		if err != nil {
+			log.Println(err)
 		}
 	}
 }
