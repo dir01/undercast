@@ -33,10 +33,10 @@ type TorrentClient interface {
 
 // App is dealing with podcast torrents CRUD API, scheduling torrents processing task and publishing resulting files as torrents once processing is finished
 type App struct {
-	Router             *mux.Router
-	DB                 *sql.DB
-	Repository         *repository
-	Torrent            TorrentClient
+	Router     *mux.Router
+	DB         *sql.DB
+	Repository *repository
+	Torrent    TorrentClient
 
 	uiDevServerURL     string
 	wsConnections      []*websocket.Conn
@@ -145,20 +145,24 @@ func (a *App) handleWebsocket() http.HandlerFunc {
 
 func (a *App) setupTorrent() {
 	a.Torrent.OnTorrentChanged(func(id int, state TorrentState) {
-		bytes, _ := json.Marshal(state)
-		a.wsConnectionsMutex.Lock()
-		i := 0
-		for _, ws := range a.wsConnections {
-			if err := ws.WriteMessage(1, bytes); err == nil {
-				a.wsConnections[i] = ws
-				i++
-			} else {
-				log.Println("Removing ws connections due to error:\n", err)
-			}
-		}
-		a.wsConnections = a.wsConnections[:i]
-		a.wsConnectionsMutex.Unlock()
+		a.dispatchWebsocketMessage(state)
 	})
+}
+
+func (a *App) dispatchWebsocketMessage(message interface{}) {
+	bytes, _ := json.Marshal(message)
+	a.wsConnectionsMutex.Lock()
+	i := 0
+	for _, ws := range a.wsConnections {
+		if err := ws.WriteMessage(1, bytes); err == nil {
+			a.wsConnections[i] = ws
+			i++
+		} else {
+			log.Println("Removing ws connections due to error:\n", err)
+		}
+	}
+	a.wsConnections = a.wsConnections[:i]
+	a.wsConnectionsMutex.Unlock()
 }
 
 func (a *App) initializeDatabase(host, port, user, password, dbName string) {
