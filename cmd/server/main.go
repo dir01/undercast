@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	t, err := bittorrent.NewClient()
+	t, err := bittorrent.NewClient(os.Getenv("DATA_DIR"))
 	if err != nil {
 		panic("Failed to initialize bittorrent client:\n" + err.Error())
 	}

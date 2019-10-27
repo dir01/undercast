@@ -12,9 +12,11 @@ import (
 )
 
 // NewClient creates new Client
-func NewClient() (server.TorrentClient, error) {
+func NewClient(dataDir string) (server.TorrentClient, error) {
 	c := &torrentClient{}
-	tc, err := torrent.NewClient(nil)
+	cfg := anacrolix.NewDefaultClientConfig()
+	cfg.DataDir = dataDir
+	tc, err := torrent.NewClient(cfg)
 	c.client = tc
 	c.torrentsMap = make(map[int]*anacrolix.Torrent)
 	return c, err

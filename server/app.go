@@ -149,7 +149,6 @@ func (a *App) setupTorrent() {
 func (a *App) initializeDatabase(host, port, user, password, dbName string) {
 	connectionString :=
 		fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", user, password, host, dbName)
-	log.Println("Initializing DB: ", connectionString)
 
 	var err error
 	a.DB, err = sql.Open("postgres", connectionString)
@@ -157,6 +156,7 @@ func (a *App) initializeDatabase(host, port, user, password, dbName string) {
 		log.Fatal(err)
 	}
 
+	log.Println("Initializing DB: ", connectionString)
 	const tableCreationQuery = `
 CREATE TABLE IF NOT EXISTS torrents (
 	id SERIAL PRIMARY KEY,

@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	c, _ := bittorrent.NewClient()
+	c, _ := bittorrent.NewClient(os.Getenv("DATA_DIR"))
 
 	downloading := true
 
