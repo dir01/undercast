@@ -6,3 +6,6 @@ runserver:
 
 runserver-dev: UI_DEV_SERVER_URL=http://localhost:4200
 runserver-dev: runserver
+
+build_ui:
+	time bash -c "cd ui; npm i; npm run build"
