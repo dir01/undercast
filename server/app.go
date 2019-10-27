@@ -34,6 +34,7 @@ type TorrentClient interface {
 type App struct {
 	Router         *mux.Router
 	DB             *sql.DB
+	Repository     *repository
 	Torrent        TorrentClient
 	uiDevServerURL string
 	wsConnections  []*websocket.Conn
@@ -44,6 +45,7 @@ func (a *App) Initialize(dbHost, dbPort, dbUser, dbPassword, dbName, uiDevServer
 	a.uiDevServerURL = uiDevServerURL
 	log.Println("Initializing app")
 	a.initializeDatabase(dbHost, dbPort, dbUser, dbPassword, dbName)
+	a.Repository = newRepository(a.DB)
 	a.initializeRoutes()
 	a.setupTorrent()
 }
@@ -65,7 +67,7 @@ func (a *App) initializeRoutes() {
 
 func (a *App) getTorrentsList() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		torrents, err := getTorrentsList(a.DB, 0, 10)
+		torrents, err := a.Repository.getTorrentsList(0, 10)
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, err.Error())
 			return
@@ -84,7 +86,7 @@ func (a *App) createTorrent() http.HandlerFunc {
 		}
 		defer r.Body.Close()
 
-		if err := t.createTorrent(a.DB); err != nil {
+		if err := a.Repository.createTorrent(&t); err != nil {
 			respondWithError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -107,8 +109,7 @@ func (a *App) deleteTorrent() http.HandlerFunc {
 			return
 		}
 
-		t := torrent{ID: id}
-		if err := t.deleteTorrent(a.DB); err == nil {
+		if err := a.Repository.deleteTorrent(id); err == nil {
 			respondWithJSON(w, http.StatusOK, map[string]string{"result": "success"})
 		} else if err.Error() == "Not found" {
 			respondWithError(w, http.StatusNotFound, err.Error())
