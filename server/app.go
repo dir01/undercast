@@ -97,11 +97,8 @@ func (a *App) createTorrent() http.HandlerFunc {
 			return
 		}
 
-		if t.Magnet != "" {
-			a.Torrent.AddTorrent(t.ID, t.Magnet)
-		} else if t.URL != "" {
-			a.Torrent.AddTorrent(t.ID, t.URL)
-		}
+		a.Torrent.AddTorrent(t.ID, t.Source)
+
 		respondWithJSON(w, http.StatusCreated, t)
 	}
 }
@@ -168,27 +165,11 @@ func (a *App) dispatchWebsocketMessage(message interface{}) {
 func (a *App) initializeDatabase(host, port, user, password, dbName string) {
 	connectionString :=
 		fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", user, password, host, dbName)
+	log.Println("Initializing DB: ", connectionString)
 
 	var err error
 	a.DB, err = sql.Open("postgres", connectionString)
 	if err != nil {
-		log.Fatal(err)
-	}
-
-	log.Println("Initializing DB: ", connectionString)
-	const tableCreationQuery = `
-CREATE TABLE IF NOT EXISTS torrents (
-	id SERIAL PRIMARY KEY,
-	name VARCHAR(500) NOT NULL,
-	magnet VARCHAR(500),
-	url VARCHAR(500),
-	CONSTRAINT require_magnet_or_url CHECK (
-		(case when magnet is null or length(magnet) = 0 then 0 else 1 end)
-		<> 
-		(case when url is null or length(url) = 0 then 0 else 1 end)
-	)
-)`
-	if _, err := a.DB.Exec(tableCreationQuery); err != nil {
 		log.Fatal(err)
 	}
 }

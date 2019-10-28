@@ -43,50 +43,30 @@ func TestListTorrents(t *testing.T) {
 }
 
 func TestCreateTorrent(t *testing.T) {
-	t.Run("with magnet", func(t *testing.T) {
+	t.Run("from source field", func(t *testing.T) {
 		clearTable()
 		tor := setupTorrentMock(a)
 
 		payload := []byte(`{
-		"name": "Around the world in 80 days",
-		"magnet": "magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c"
+		"source": "magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c"
 	}`)
 		req, _ := http.NewRequest("POST", "/api/torrents", bytes.NewBuffer(payload))
 		response := executeRequest(req)
 
 		checkResponseStatusCode(t, response, http.StatusCreated)
-		checkResponseBody(t, response, `{"id":1,"name":"Around the world in 80 days","magnet":"magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c","url":""}`)
+		checkResponseBody(t, response, `{"id":1,"state":"","name":"","source":"magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c","filenames":null,"bytesCompleted":0,"bytesMissing":0}`)
 		if tor.id != 1 || tor.source != "magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c" {
 			t.Errorf("Magnet link not added to torrent client")
 		}
 	})
 
-	t.Run("with url", func(t *testing.T) {
-		clearTable()
-		tor := setupTorrentMock(a)
-
-		payload := []byte(`{
-		"name": "Around the world in 80 days",
-		"url": "http://legittorrents.info/download.php?id=1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c"
-		}`)
-		req, _ := http.NewRequest("POST", "/api/torrents", bytes.NewBuffer(payload))
-		response := executeRequest(req)
-
-		checkResponseStatusCode(t, response, http.StatusCreated)
-		checkResponseBody(t, response, `{"id":1,"name":"Around the world in 80 days","magnet":"","url":"http://legittorrents.info/download.php?id=1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c"}`)
-		if tor.id != 1 || tor.source != "http://legittorrents.info/download.php?id=1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c" {
-			t.Errorf("Torrent URL not added to torrent client")
-		}
-
-	})
-
-	t.Run("fails to create without source or url", func(t *testing.T) {
-		payload := []byte(`{ "name": "Around the world in 80 days" }`)
+	t.Run("fails to create torrent without source", func(t *testing.T) {
+		payload := []byte(`{}`)
 		req, _ := http.NewRequest("POST", "/api/torrents", bytes.NewBuffer(payload))
 		response := executeRequest(req)
 
 		checkResponseStatusCode(t, response, http.StatusInternalServerError)
-		checkResponseBody(t, response, `{"error":"pq: new row for relation \"torrents\" violates check constraint \"require_magnet_or_url\""}`)
+		checkResponseBody(t, response, `{"error":"pq: new row for relation \"torrents\" violates check constraint \"require_source\""}`)
 	})
 }
 
@@ -120,7 +100,6 @@ func TestDeleteTorrent(t *testing.T) {
 
 		checkResponseStatusCode(t, response, http.StatusBadRequest)
 	})
-
 }
 
 func executeRequest(req *http.Request) *httptest.ResponseRecorder {
@@ -145,7 +124,7 @@ func checkResponseBody(t *testing.T, response *httptest.ResponseRecorder, expect
 
 func insertTorrent() int {
 	var id int
-	err := a.DB.QueryRow("INSERT INTO torrents (name, magnet) VALUES ($1, $2) RETURNING id", "Some name", "Some magnet").Scan(&id)
+	err := a.DB.QueryRow("INSERT INTO torrents (source) VALUES ($1) RETURNING id", "magnet url or something").Scan(&id)
 	if err != nil {
 		log.Fatal(err)
 	}
