@@ -30,7 +30,8 @@ type TorrentClient interface {
 	OnTorrentChanged(func(id int, info TorrentState))
 }
 
-// App is dealing with podcast torrents CRUD API, scheduling torrents processing task and publishing resulting files as torrents once processing is finished
+// App is dealing with podcast torrents CRUD API, scheduling torrents processing tasks,
+// and publishing resulting files as torrents once processing is finished
 type App struct {
 	Router     *mux.Router
 	DB         *sql.DB

@@ -1,8 +1,12 @@
 test:
-	DB_URL=postgres://undercast:undercast@localhost/undercast go test -v ./...
+	DB_URL=postgres://undercast:undercast@localhost/undercast \
+	go test -v ./...
 
 runserver:
-	DB_URL=postgres://undercast:undercast@localhost/undercast UI_DEV_SERVER_URL=$(UI_DEV_SERVER_URL) DB_NAME=undercast DATA_DIR=./data go run ./cmd/server
+	DB_URL=postgres://undercast:undercast@localhost/undercast \
+	DATA_DIR=./data \
+	UI_DEV_SERVER_URL=$(UI_DEV_SERVER_URL) \
+	go run ./cmd/server
 
 runserver-dev: UI_DEV_SERVER_URL=http://localhost:4200
 runserver-dev: runserver
