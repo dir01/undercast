@@ -16,14 +16,7 @@ var a *server.App
 func TestMain(m *testing.M) {
 	a = &server.App{}
 	setupTorrentMock(a)
-	a.Initialize(
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_PORT"),
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_NAME"),
-		"",
-	)
+	a.Initialize( os.Getenv("DB_URL"), "", )
 
 	code := m.Run()
 

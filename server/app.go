@@ -3,7 +3,6 @@ package server
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -44,12 +43,12 @@ type App struct {
 }
 
 // Initialize sets up database connection and routes
-func (a *App) Initialize(dbHost, dbPort, dbUser, dbPassword, dbName, uiDevServerURL string) {
+func (a *App) Initialize(dbURL, uiDevServerURL string) {
 	a.uiDevServerURL = uiDevServerURL
 	a.wsConnectionsMutex = &sync.Mutex{}
 
 	log.Println("Initializing app")
-	a.initializeDatabase(dbHost, dbPort, dbUser, dbPassword, dbName)
+	a.initializeDatabase(dbURL)
 	a.Repository = newRepository(a.DB)
 	a.uiDevServerURL = uiDevServerURL
 	a.initializeRoutes()
@@ -162,13 +161,11 @@ func (a *App) dispatchWebsocketMessage(message interface{}) {
 	a.wsConnectionsMutex.Unlock()
 }
 
-func (a *App) initializeDatabase(host, port, user, password, dbName string) {
-	connectionString :=
-		fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", user, password, host, dbName)
-	log.Println("Initializing DB: ", connectionString)
-
+func (a *App) initializeDatabase(dbURL string) {
+	dbURL = dbURL + "?sslmode=disable"
+	log.Println("Initializing DB: ", dbURL)
 	var err error
-	a.DB, err = sql.Open("postgres", connectionString)
+	a.DB, err = sql.Open("postgres", dbURL)
 	if err != nil {
 		log.Fatal(err)
 	}
