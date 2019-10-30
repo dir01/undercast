@@ -5,7 +5,8 @@ type state string
 const added state = "ADDED"
 const downloaded state = "DOWNLOADED"
 
-type torrent struct {
+// Torrent repreesents 
+type Torrent struct {
 	ID             int      `json:"id"`
 	State          state    `json:"state"`
 	Name           string   `json:"name"`
@@ -15,11 +16,11 @@ type torrent struct {
 	BytesMissing   int64    `json:"bytesMissing"`
 }
 
-func (t *torrent) markAsAdded() {
+func (t *Torrent) markAsAdded() {
 	t.State = added
 }
 
 
-func (t *torrent) markAsDownloaded() {
+func (t *Torrent) markAsDownloaded() {
 	t.State = downloaded
 }

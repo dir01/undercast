@@ -84,7 +84,7 @@ func (a *App) getTorrentsList() http.HandlerFunc {
 
 func (a *App) createTorrent() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var t torrent
+		var t Torrent
 		decoder := json.NewDecoder(r.Body)
 		if err := decoder.Decode(&t); err != nil {
 			respondWithError(w, http.StatusBadRequest, "Invalid request payload")
@@ -92,7 +92,7 @@ func (a *App) createTorrent() http.HandlerFunc {
 		}
 		defer r.Body.Close()
 
-		if err := a.Repository.createTorrent(&t); err != nil {
+		if err := a.Repository.CreateTorrent(&t); err != nil {
 			respondWithError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -190,8 +190,11 @@ func respondWithError(w http.ResponseWriter, code int, message string) {
 }
 
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
-	response, _ := json.Marshal(payload)
+	resp, err := json.Marshal(payload)
+	if err != nil {
+		log.Println("Error while serializing payload:\n", err)
+	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	w.Write(response)
+	w.Write(resp)
 }

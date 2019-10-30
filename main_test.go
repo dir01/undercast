@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -11,12 +13,14 @@ import (
 	"undercast/server"
 )
 
+type Torrent = server.Torrent
+
 var a *server.App
 
 func TestMain(m *testing.M) {
 	a = &server.App{}
 	setupTorrentMock(a)
-	a.Initialize( os.Getenv("DB_URL"), "", )
+	a.Initialize(os.Getenv("DB_URL"), "")
 
 	code := m.Run()
 
@@ -24,30 +28,18 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func TestListTorrents(t *testing.T) {
-	t.Run("empty table results in empty array", func(t *testing.T) {
-		clearTable()
-
-		req, _ := http.NewRequest("GET", "/api/torrents", nil)
-		response := executeRequest(req)
-
-		checkResponseStatusCode(t, response, http.StatusOK)
-	})
-}
-
 func TestCreateTorrent(t *testing.T) {
 	t.Run("from source field", func(t *testing.T) {
 		clearTable()
 		tor := setupTorrentMock(a)
 
-		payload := []byte(`{
-		"source": "magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c"
-	}`)
-		req, _ := http.NewRequest("POST", "/api/torrents", bytes.NewBuffer(payload))
-		response := executeRequest(req)
+		payload := []byte(`{ "source": "magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c" }`)
+		response := getResponse("POST", "/api/torrents", bytes.NewBuffer(payload))
 
-		checkResponseStatusCode(t, response, http.StatusCreated)
-		checkResponseBody(t, response, `{"id":1,"state":"","name":"","source":"magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c","filenames":null,"bytesCompleted":0,"bytesMissing":0}`)
+		checkResponse(t, response, http.StatusCreated,
+			`{"id":1,"state":"","name":"","source":"magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c","filenames":null,"bytesCompleted":0,"bytesMissing":0}`,
+		)
+
 		if tor.id != 1 || tor.source != "magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c" {
 			t.Errorf("Magnet link not added to torrent client")
 		}
@@ -55,11 +47,36 @@ func TestCreateTorrent(t *testing.T) {
 
 	t.Run("fails to create torrent without source", func(t *testing.T) {
 		payload := []byte(`{}`)
-		req, _ := http.NewRequest("POST", "/api/torrents", bytes.NewBuffer(payload))
-		response := executeRequest(req)
+		response := getResponse("POST", "/api/torrents", bytes.NewBuffer(payload))
+		checkResponse(
+			t, response, http.StatusInternalServerError,
+			`{"error":"pq: new row for relation \"torrents\" violates check constraint \"require_source\""}`,
+		)
+	})
+}
 
-		checkResponseStatusCode(t, response, http.StatusInternalServerError)
-		checkResponseBody(t, response, `{"error":"pq: new row for relation \"torrents\" violates check constraint \"require_source\""}`)
+func TestListTorrents(t *testing.T) {
+	t.Run("paginated queries", func(t *testing.T) {
+		clearTable()
+
+		a.Repository.CreateTorrent(&Torrent{Source: "a"})
+		a.Repository.CreateTorrent(&Torrent{Source: "b"})
+		a.Repository.CreateTorrent(&Torrent{Source: "c"})
+
+		response := getResponse("GET", "/api/torrents", nil)
+		checkResponse(t, response, http.StatusOK, []Torrent{
+			Torrent{ID: 1, Source: "a"},
+			Torrent{ID: 2, Source: "b"},
+			Torrent{ID: 3, Source: "c"},
+		})
+	})
+
+	t.Run("empty table results in empty array", func(t *testing.T) {
+		clearTable()
+
+		response := getResponse("GET", "/api/torrents", nil)
+
+		checkResponse(t, response, http.StatusOK, nil)
 	})
 }
 
@@ -68,47 +85,55 @@ func TestDeleteTorrent(t *testing.T) {
 		clearTable()
 		id := insertTorrent()
 
-		req, _ := http.NewRequest("DELETE", fmt.Sprintf("/api/torrents/%d", id), nil)
-		response := executeRequest(req)
+		response := getResponse("DELETE", fmt.Sprintf("/api/torrents/%d", id), nil)
+		checkResponse(t, response, http.StatusOK, `{"result":"success"}`)
 
-		checkResponseStatusCode(t, response, http.StatusOK)
-
-		req, _ = http.NewRequest("GET", "/api/torrents", nil)
-		response = executeRequest(req)
-
-		checkResponseStatusCode(t, response, http.StatusOK)
-		checkResponseBody(t, response, `[]`)
+		response = getResponse("GET", "/api/torrents", nil)
+		checkResponse(t, response, http.StatusOK, `[]`)
 	})
 
 	t.Run("fails if no torrent", func(t *testing.T) {
-		req, _ := http.NewRequest("DELETE", "/api/torrents/100", nil)
-		response := executeRequest(req)
-
-		checkResponseStatusCode(t, response, http.StatusNotFound)
+		response := getResponse("DELETE", "/api/torrents/100", nil)
+		checkResponse(t, response, http.StatusNotFound, `{"error":"Not found"}`)
 	})
 
 	t.Run("fails if wrong id", func(t *testing.T) {
-		req, _ := http.NewRequest("DELETE", "/api/torrents/99999999999999999999999999999", nil)
-		response := executeRequest(req)
-
-		checkResponseStatusCode(t, response, http.StatusBadRequest)
+		response := getResponse("DELETE", "/api/torrents/99999999999999999999999999999", nil)
+		checkResponse(t, response, http.StatusBadRequest, `{"error":"Invalid torrent id"}`)
 	})
 }
 
-func executeRequest(req *http.Request) *httptest.ResponseRecorder {
+func getResponse(method string, url string, body io.Reader) *httptest.ResponseRecorder {
+	req, _ := http.NewRequest(method, url, body)
 	rr := httptest.NewRecorder()
 	a.Router.ServeHTTP(rr, req)
 	return rr
 }
 
-func checkResponseStatusCode(t *testing.T, response *httptest.ResponseRecorder, expectedCode int) {
+func checkResponse(
+	t *testing.T,
+	response *httptest.ResponseRecorder,
+	expectedCode int,
+	expectedPayload interface{},
+) {
 	actualCode := response.Code
 	if expectedCode != actualCode {
 		t.Errorf("Expected response code %d. Got %d\n%s", expectedCode, actualCode, response.Body)
 	}
-}
 
-func checkResponseBody(t *testing.T, response *httptest.ResponseRecorder, expectedBody string) {
+	if expectedPayload == nil {
+		return
+	}
+
+	var expectedBody string
+	switch expectedPayload.(type) {
+	case string:
+		expectedBody = expectedPayload.(string)
+	default:
+		expectedBytes, _ := json.Marshal(expectedPayload)
+		expectedBody = string(expectedBytes)
+	}
+
 	actualBody := response.Body.String()
 	if expectedBody != actualBody {
 		t.Errorf("Unexpected response body\nEXPECTED:\n%s\nACTUAL:\n%s", expectedBody, actualBody)

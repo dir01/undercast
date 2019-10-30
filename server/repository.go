@@ -19,7 +19,7 @@ func newRepository(db *sql.DB) *repository {
 	return &r
 }
 
-func (r *repository) createTorrent(t *torrent) error {
+func (r *repository) CreateTorrent(t *Torrent) error {
 	dt := dbTorrentFromTorrent(t)
 	stmt, err := r.db.PrepareNamed(`INSERT INTO torrents(
 			state, name, source, filenames, bytes_completed, bytes_missing
@@ -35,28 +35,25 @@ func (r *repository) createTorrent(t *torrent) error {
 	return nil
 }
 
-func (r *repository) getTorrentsList(start, count int) ([]torrent, error) {
-	rows, err := r.db.Query("SELECT "+
-		"id, state, source, filenames, bytes_completed, bytes_missing "+
-		"FROM torrents LIMIT $1 OFFSET $2", count, start)
+func (r *repository) getTorrentsList(start, count int) ([]Torrent, error) {
+	args := map[string]interface{}{
+		"limit":  count,
+		"offset": start,
+	}
+	stmt, _ := r.db.PrepareNamed("SELECT * FROM torrents LIMIT :limit OFFSET :offset")
+	defer stmt.Close()
+
+	dbTorList := []dbTorrent{}
+	err := stmt.Select(&dbTorList, args)
 	if err != nil {
 		return nil, err
 	}
 
-	defer rows.Close()
-
-	torrents := []torrent{}
-	for rows.Next() {
-		var t torrent
-		var f string
-		if err := rows.Scan(&t.ID, &t.State, &t.Source, &f, &t.BytesCompleted, &t.BytesMissing); err != nil {
-			return nil, err
-		}
-
-		t.FileNames = append(t.FileNames, f)
-		torrents = append(torrents, t)
+	result := []Torrent{}
+	for _, dt := range dbTorList {
+		result = append(result, dt.toEntity())
 	}
-	return torrents, nil
+	return result, nil
 }
 
 func (r *repository) deleteTorrent(id int) error {
@@ -100,7 +97,7 @@ type dbTorrent struct {
 	BytesMissing   int64  `db:"bytes_missing"`
 }
 
-func dbTorrentFromTorrent(t *torrent) *dbTorrent {
+func dbTorrentFromTorrent(t *Torrent) *dbTorrent {
 	return &dbTorrent{
 		ID:             t.ID,
 		State:          string(t.State),
@@ -112,8 +109,8 @@ func dbTorrentFromTorrent(t *torrent) *dbTorrent {
 	}
 }
 
-func (dt *dbTorrent) toEntity() *torrent {
-	return &torrent{
+func (dt *dbTorrent) toEntity() Torrent {
+	return Torrent{
 		ID:             dt.ID,
 		State:          state(dt.State),
 		Name:           dt.Name,
@@ -125,10 +122,10 @@ func (dt *dbTorrent) toEntity() *torrent {
 }
 
 func marshalFilenames(filenames []string) string {
-	if f, err := json.Marshal(filenames); err == nil {
-		return string(f)
-	} else {
+	if f, err := json.Marshal(filenames); err != nil {
 		panic(err)
+	} else {
+		return string(f)
 	}
 }
 
