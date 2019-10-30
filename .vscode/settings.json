@@ -1,4 +1,7 @@
 {
     "go.useLanguageServer": true,
-    "go.formatTool": "goimports"
+    "go.formatTool": "goimports",
+    "go.testEnvVars": {
+        "DB_URL": "postgres://undercast:undercast@localhost/undercast"
+    }
 }
