@@ -1,0 +1,13 @@
+.git
+./ui/node_modules
+./ui/dist
+./data
+./bin
+./test
+
+Dockerfile
+docker-compose.yaml
+.gitignore
+.dockerignore
+.idea
+.vscode
