@@ -2,12 +2,9 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"testing"
 	"undercast/server"
@@ -103,43 +100,6 @@ func TestDeleteTorrent(t *testing.T) {
 	})
 }
 
-func getResponse(method string, url string, body io.Reader) *httptest.ResponseRecorder {
-	req, _ := http.NewRequest(method, url, body)
-	rr := httptest.NewRecorder()
-	a.Router.ServeHTTP(rr, req)
-	return rr
-}
-
-func checkResponse(
-	t *testing.T,
-	response *httptest.ResponseRecorder,
-	expectedCode int,
-	expectedPayload interface{},
-) {
-	actualCode := response.Code
-	if expectedCode != actualCode {
-		t.Errorf("Expected response code %d. Got %d\n%s", expectedCode, actualCode, response.Body)
-	}
-
-	if expectedPayload == nil {
-		return
-	}
-
-	var expectedBody string
-	switch expectedPayload.(type) {
-	case string:
-		expectedBody = expectedPayload.(string)
-	default:
-		expectedBytes, _ := json.Marshal(expectedPayload)
-		expectedBody = string(expectedBytes)
-	}
-
-	actualBody := response.Body.String()
-	if expectedBody != actualBody {
-		t.Errorf("Unexpected response body\nEXPECTED:\n%s\nACTUAL:\n%s", expectedBody, actualBody)
-	}
-}
-
 func insertTorrent() int {
 	var id int
 	err := a.DB.QueryRow("INSERT INTO torrents (source) VALUES ($1) RETURNING id", "magnet url or something").Scan(&id)
@@ -147,34 +107,4 @@ func insertTorrent() int {
 		log.Fatal(err)
 	}
 	return id
-}
-
-func clearTable() {
-	a.DB.Exec("DELETE FROM torrents")
-	a.DB.Exec("ALTER SEQUENCE torrents_id_seq RESTART WITH 1")
-}
-
-func dropTable() {
-	a.DB.Exec("DROP TABLE torrents")
-}
-
-type torrentMock struct {
-	id     int
-	source string
-}
-
-func setupTorrentMock(a *server.App) *torrentMock {
-	t := &torrentMock{}
-	a.Torrent = t
-	return t
-}
-
-func (t *torrentMock) AddTorrent(id int, source string) error {
-	t.id = id
-	t.source = source
-	return nil
-}
-
-func (t *torrentMock) OnTorrentChanged(callback func(id int, state server.TorrentState)) {
-
 }
