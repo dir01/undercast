@@ -25,6 +25,20 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+func TestResumeOnBoot(t *testing.T) {
+	id1 := insertTorrent("source 1", "ADDED")
+	id2 := insertTorrent("source 2", "ADDED")
+	id3 := insertTorrent("source 3", "DOWNLOADED")
+
+	app := &server.App{}
+	tm := setupTorrentMock(app)
+	app.Initialize(os.Getenv("DB_URL"), "")
+
+	tm.assertTorrentAdded(t, id1, "source 1")
+	tm.assertTorrentAdded(t, id2, "source 2")
+	tm.assertTorrentNotAdded(t, id3, "source 3")
+}
+
 func TestCreateTorrent(t *testing.T) {
 	t.Run("from source field", func(t *testing.T) {
 		clearTable()
@@ -36,10 +50,7 @@ func TestCreateTorrent(t *testing.T) {
 		checkResponse(t, response, http.StatusCreated,
 			`{"id":1,"state":"","name":"","source":"magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c","filenames":null,"bytesCompleted":0,"bytesMissing":0}`,
 		)
-
-		if tor.id != 1 || tor.source != "magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c" {
-			t.Errorf("Magnet link not added to torrent client")
-		}
+		tor.assertTorrentAdded(t, 1, "magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c")
 	})
 
 	t.Run("fails to create torrent without source", func(t *testing.T) {
@@ -80,9 +91,10 @@ func TestListTorrents(t *testing.T) {
 func TestDeleteTorrent(t *testing.T) {
 	t.Run("successful deletion", func(t *testing.T) {
 		clearTable()
-		id := insertTorrent()
+		torrent := &Torrent{Source: "something"}
+		a.Repository.CreateTorrent(torrent)
 
-		response := getResponse("DELETE", fmt.Sprintf("/api/torrents/%d", id), nil)
+		response := getResponse("DELETE", fmt.Sprintf("/api/torrents/%d", torrent.ID), nil)
 		checkResponse(t, response, http.StatusOK, `{"result":"success"}`)
 
 		response = getResponse("GET", "/api/torrents", nil)
@@ -100,9 +112,10 @@ func TestDeleteTorrent(t *testing.T) {
 	})
 }
 
-func insertTorrent() int {
+func insertTorrent(source, state string) int {
+	db := getDB(os.Getenv("DB_URL"))
 	var id int
-	err := a.DB.QueryRow("INSERT INTO torrents (source) VALUES ($1) RETURNING id", "magnet url or something").Scan(&id)
+	err := db.QueryRow("INSERT INTO torrents (source, state) VALUES ($1, $2) RETURNING id", source, state).Scan(&id)
 	if err != nil {
 		log.Fatal(err)
 	}

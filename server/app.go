@@ -144,6 +144,13 @@ func (a *App) setupTorrent() {
 	a.Torrent.OnTorrentChanged(func(id int, state TorrentState) {
 		a.dispatchWebsocketMessage(state)
 	})
+	if torrents, err := a.Repository.getUnfinisedTorrents(); err != nil {
+		log.Fatal("Failed to get unfinished torrents\n", err)
+	} else {
+		for _, t := range torrents {
+			a.Torrent.AddTorrent(t.ID, t.Source)
+		}
+	}
 }
 
 func (a *App) dispatchWebsocketMessage(message interface{}) {

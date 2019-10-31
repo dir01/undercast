@@ -1,24 +1,52 @@
 package main
 
-import "undercast/server"
+import (
+	"testing"
+	"undercast/server"
+)
 
-type torrentMock struct {
+type addTorrentCall struct {
 	id     int
 	source string
 }
 
-func setupTorrentMock(a *server.App) *torrentMock {
-	t := &torrentMock{}
-	a.Torrent = t
-	return t
+type torrentMock struct {
+	addTorrentCalls []addTorrentCall
 }
 
-func (t *torrentMock) AddTorrent(id int, source string) error {
-	t.id = id
-	t.source = source
+func setupTorrentMock(a *server.App) *torrentMock {
+	tm := &torrentMock{}
+	a.Torrent = tm
+	return tm
+}
+
+func (tm *torrentMock) AddTorrent(id int, source string) error {
+	call := addTorrentCall{id: id, source: source}
+	tm.addTorrentCalls = append(tm.addTorrentCalls, call)
 	return nil
 }
 
-func (t *torrentMock) OnTorrentChanged(callback func(id int, state server.TorrentState)) {
+func (tm *torrentMock) OnTorrentChanged(callback func(id int, state server.TorrentState)) {
 
+}
+
+func (tm *torrentMock) assertTorrentAdded(t *testing.T, id int, source string) {
+	if !tm.isTorrentAdded(id, source) {
+		t.Errorf("Torrent was not added to client, but it was expected to: \nid=\"%d\" and source=\"%s\"", id, source)
+	}
+}
+
+func (tm *torrentMock) assertTorrentNotAdded(t *testing.T, id int, source string) {
+	if tm.isTorrentAdded(id, source) {
+		t.Errorf("Torrent was added to client, but it was expected not to: \nid=\"%d\" and source=\"%s\"", id, source)
+	}
+}
+
+func (tm *torrentMock) isTorrentAdded(id int, source string) bool {
+	for _, c := range tm.addTorrentCalls {
+		if c.id == id && c.source == source {
+			return true
+		}
+	}
+	return false
 }

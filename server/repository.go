@@ -35,12 +35,23 @@ func (r *repository) CreateTorrent(t *Torrent) error {
 	return nil
 }
 
+func (r *repository) getUnfinisedTorrents() ([]Torrent, error) {
+	return r.queryToTorrents("SELECT * from torrents WHERE state='ADDED'", nil)
+}
+
 func (r *repository) getTorrentsList(start, count int) ([]Torrent, error) {
 	args := map[string]interface{}{
 		"limit":  count,
 		"offset": start,
 	}
-	stmt, _ := r.db.PrepareNamed("SELECT * FROM torrents LIMIT :limit OFFSET :offset")
+	return r.queryToTorrents("SELECT * FROM torrents LIMIT :limit OFFSET :offset", args)
+}
+
+func (r *repository) queryToTorrents(query string, args interface{}) ([]Torrent, error) {
+	if args == nil {
+		args = struct{}{}
+	}
+	stmt, _ := r.db.PrepareNamed(query)
 	defer stmt.Close()
 
 	dbTorList := []dbTorrent{}
@@ -54,6 +65,7 @@ func (r *repository) getTorrentsList(start, count int) ([]Torrent, error) {
 		result = append(result, dt.toEntity())
 	}
 	return result, nil
+
 }
 
 func (r *repository) deleteTorrent(id int) error {
@@ -88,24 +100,24 @@ CREATE TABLE IF NOT EXISTS torrents (
 }
 
 type dbTorrent struct {
-	ID             int    `db:"id"`
-	State          string `db:"state"`
-	Name           string `db:"name"`
-	Source         string `db:"source"`
-	FileNames      string `db:"filenames"`
-	BytesCompleted int64  `db:"bytes_completed"`
-	BytesMissing   int64  `db:"bytes_missing"`
+	ID             int            `db:"id"`
+	State          string         `db:"state"`
+	Source         string         `db:"source"`
+	Name           sql.NullString `db:"name"`
+	FileNames      sql.NullString `db:"filenames"`
+	BytesCompleted sql.NullInt64  `db:"bytes_completed"`
+	BytesMissing   sql.NullInt64  `db:"bytes_missing"`
 }
 
 func dbTorrentFromTorrent(t *Torrent) *dbTorrent {
 	return &dbTorrent{
 		ID:             t.ID,
 		State:          string(t.State),
-		Name:           t.Name,
+		Name:           sql.NullString{String: t.Name},
 		Source:         t.Source,
-		FileNames:      marshalFilenames(t.FileNames),
-		BytesCompleted: t.BytesCompleted,
-		BytesMissing:   t.BytesMissing,
+		FileNames:      sql.NullString{String: marshalFilenames(t.FileNames)},
+		BytesCompleted: sql.NullInt64{Int64: t.BytesCompleted},
+		BytesMissing:   sql.NullInt64{Int64: t.BytesMissing},
 	}
 }
 
@@ -113,11 +125,11 @@ func (dt *dbTorrent) toEntity() Torrent {
 	return Torrent{
 		ID:             dt.ID,
 		State:          state(dt.State),
-		Name:           dt.Name,
+		Name:           dt.Name.String,
 		Source:         dt.Source,
-		FileNames:      unmarshalFilenames(dt.FileNames),
-		BytesCompleted: dt.BytesCompleted,
-		BytesMissing:   dt.BytesMissing,
+		FileNames:      unmarshalFilenames(dt.FileNames.String),
+		BytesCompleted: dt.BytesCompleted.Int64,
+		BytesMissing:   dt.BytesMissing.Int64,
 	}
 }
 
@@ -130,6 +142,9 @@ func marshalFilenames(filenames []string) string {
 }
 
 func unmarshalFilenames(fnStr string) (filenames []string) {
+	if fnStr == "" {
+		return nil
+	}
 	err := json.Unmarshal([]byte(fnStr), &filenames)
 	if err != nil {
 		panic(err)
