@@ -1,41 +1,44 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Undercast</title>
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <link
+      href="https://fonts.googleapis.com/css?family=Roboto:300,400,500&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+    <script>
+      let socket = new WebSocket("ws://127.0.0.1:8080/api/ws");
+      console.log("Attempting Connection...");
 
-<head>
-  <meta charset="utf-8">
-  <title>Undercast</title>
-  <base href="/">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
-  <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <script>
-    let socket = new WebSocket("ws://127.0.0.1:8080/api/ws");
-    console.log("Attempting Connection...");
+      socket.onopen = () => {
+        console.log("Successfully Connected");
+        socket.send("Hi From the Client!");
+      };
 
-    socket.onopen = () => {
-      console.log("Successfully Connected");
-      socket.send("Hi From the Client!")
-    };
+      socket.onclose = event => {
+        console.log("Socket Closed Connection: ", event);
+        socket.send("Client Closed!");
+      };
 
-    socket.onclose = event => {
-      console.log("Socket Closed Connection: ", event);
-      socket.send("Client Closed!")
-    };
+      socket.onerror = error => {
+        console.log("Socket Error: ", error);
+      };
 
-    socket.onerror = error => {
-      console.log("Socket Error: ", error);
-    };
+      socket.onmessage = event => {
+        console.debug("WebSocket message received:", JSON.parse(event.data));
+      };
+    </script>
+  </head>
 
-    socket.onmessage = event => {
-      console.debug("WebSocket message received:", event);
-    };
-
-  </script>
-</head>
-
-<body>
-  <app-root></app-root>
-</body>
-
+  <body>
+    <app-root></app-root>
+  </body>
 </html>

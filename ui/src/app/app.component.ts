@@ -21,10 +21,8 @@ export class AppComponent {
   }
 
   async addTorrent() {
-    console.log(this.torrent)
     const savedTorrent = await this._apiService.addTorrent(this.torrent);
     this.torrentList.push(savedTorrent);
-    console.log('Saved torrent: ', savedTorrent);
     this.torrent = new Torrent();
   }
 }

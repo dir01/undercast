@@ -1,5 +1,6 @@
 export class Torrent {
   id: number;
+  source: string;
   name: string;
   files: string[];
   bytesComplete: number;
