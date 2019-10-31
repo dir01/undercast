@@ -12,6 +12,7 @@ type addTorrentCall struct {
 
 type torrentMock struct {
 	addTorrentCalls []addTorrentCall
+	callback        func(id int, state server.TorrentState)
 }
 
 func setupTorrentMock(a *server.App) *torrentMock {
@@ -27,7 +28,7 @@ func (tm *torrentMock) AddTorrent(id int, source string) error {
 }
 
 func (tm *torrentMock) OnTorrentChanged(callback func(id int, state server.TorrentState)) {
-
+	tm.callback = callback
 }
 
 func (tm *torrentMock) assertTorrentAdded(t *testing.T, id int, source string) {

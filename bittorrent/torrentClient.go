@@ -77,7 +77,6 @@ func (tc *torrentClient) OnTorrentChanged(callback func(id int, state server.Tor
 }
 
 func copyFileNames(i *anacrolixMetainfo.Info) (filenames []string) {
-	filenames = make([]string, len(i.Files))
 	for _, f := range i.Files {
 		filenames = append(filenames, f.DisplayPath(i))
 	}

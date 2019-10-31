@@ -92,7 +92,8 @@ func (a *App) createTorrent() http.HandlerFunc {
 		}
 		defer r.Body.Close()
 
-		if err := a.Repository.CreateTorrent(&t); err != nil {
+		t.State = "ADDED"
+		if err := a.Repository.SaveTorrent(&t); err != nil {
 			respondWithError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -143,6 +144,15 @@ func (a *App) handleWebsocket() http.HandlerFunc {
 func (a *App) setupTorrent() {
 	a.Torrent.OnTorrentChanged(func(id int, state TorrentState) {
 		a.dispatchWebsocketMessage(state)
+		if torrent, err := a.Repository.GetTorrent(id); err != nil {
+			log.Print("Failed to fetch torrent ", id, err)
+		} else {
+			torrent.Name = state.Name
+			torrent.FileNames = state.FileNames
+			torrent.BytesCompleted = state.BytesCompleted
+			torrent.BytesMissing = state.BytesMissing
+			a.Repository.SaveTorrent(torrent)
+		}
 	})
 	if torrents, err := a.Repository.getUnfinisedTorrents(); err != nil {
 		log.Fatal("Failed to get unfinished torrents\n", err)

@@ -19,7 +19,15 @@ func newRepository(db *sql.DB) *repository {
 	return &r
 }
 
-func (r *repository) CreateTorrent(t *Torrent) error {
+func (r *repository) SaveTorrent(t *Torrent) error {
+	if t.ID == 0 {
+		return r.insertTorrent(t)
+	} else {
+		return r.updateTorrent(t)
+	}
+}
+
+func (r *repository) insertTorrent(t *Torrent) error {
 	dt := dbTorrentFromTorrent(t)
 	stmt, err := r.db.PrepareNamed(`INSERT INTO torrents(
 			state, name, source, filenames, bytes_completed, bytes_missing
@@ -33,6 +41,32 @@ func (r *repository) CreateTorrent(t *Torrent) error {
 		return err
 	}
 	return nil
+}
+
+func (r *repository) updateTorrent(t *Torrent) error {
+	dt := dbTorrentFromTorrent(t)
+	if _, err := r.db.NamedExec(`UPDATE torrents SET 
+		state=:state,
+		name=:name,
+		source=:source,
+		filenames=:filenames,
+		bytes_completed=:bytes_completed,
+		bytes_missing=:bytes_missing
+	WHERE id=:id`, dt); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *repository) GetTorrent(id int) (*Torrent, error) {
+	args := map[string]interface{}{
+		"id": id,
+	}
+	torrents, err := r.queryToTorrents("SELECT * FROM torrents WHERE id=:id", args)
+	if err != nil || len(torrents) == 0 {
+		return nil, err
+	}
+	return &torrents[0], nil
 }
 
 func (r *repository) getUnfinisedTorrents() ([]Torrent, error) {
@@ -111,13 +145,25 @@ type dbTorrent struct {
 
 func dbTorrentFromTorrent(t *Torrent) *dbTorrent {
 	return &dbTorrent{
-		ID:             t.ID,
-		State:          string(t.State),
-		Name:           sql.NullString{String: t.Name},
-		Source:         t.Source,
-		FileNames:      sql.NullString{String: marshalFilenames(t.FileNames)},
-		BytesCompleted: sql.NullInt64{Int64: t.BytesCompleted},
-		BytesMissing:   sql.NullInt64{Int64: t.BytesMissing},
+		ID:    t.ID,
+		State: string(t.State),
+		Name: sql.NullString{
+			String: t.Name,
+			Valid:  true,
+		},
+		Source: t.Source,
+		FileNames: sql.NullString{
+			String: marshalFilenames(t.FileNames),
+			Valid:  true,
+		},
+		BytesCompleted: sql.NullInt64{
+			Int64: t.BytesCompleted,
+			Valid: true,
+		},
+		BytesMissing: sql.NullInt64{
+			Int64: t.BytesMissing,
+			Valid: true,
+		},
 	}
 }
 
