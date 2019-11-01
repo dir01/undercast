@@ -5,7 +5,6 @@ type state string
 const added state = "ADDED"
 const downloaded state = "DOWNLOADED"
 
-// Torrent repreesents 
 type Torrent struct {
 	ID             int      `json:"id"`
 	State          state    `json:"state"`
@@ -20,7 +19,11 @@ func (t *Torrent) markAsAdded() {
 	t.State = added
 }
 
-
 func (t *Torrent) markAsDownloaded() {
 	t.State = downloaded
+}
+
+type Episode struct {
+	Name      string
+	Filenames []string
 }
