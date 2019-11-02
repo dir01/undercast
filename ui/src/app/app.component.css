@@ -1,9 +1,10 @@
-#episodes {
-    display: flex;
-    justify-content: center;
+#torrent__list {
+  display: flex;
+  justify-content: center;
 }
 
-#episodes__add {
-    display: flex;
-    flex-direction: column;
+#torrent__add {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
 }

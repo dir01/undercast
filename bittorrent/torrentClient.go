@@ -47,6 +47,7 @@ func (tc *torrentClient) AddTorrent(id int, magnetOrURLOrTorrent string) error {
 		<-t.GotInfo()
 		i := t.Info()
 		state := &server.TorrentState{
+			ID:             id,
 			Name:           i.Name,
 			FileNames:      copyFileNames(i),
 			BytesCompleted: t.BytesCompleted(),

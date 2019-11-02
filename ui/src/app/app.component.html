@@ -1,6 +1,10 @@
 <content>
-  <form (submit)="addTorrent()" id="torrent-form">
-    <mat-form-field>
+  <mat-toolbar>
+    <span>Undercast</span>
+  </mat-toolbar>
+
+  <div id="torrent__add">
+    <mat-form-field appearance="outline">
       <input
         name="source"
         [(ngModel)]="torrent.source"
@@ -8,9 +12,21 @@
         matInput
       />
     </mat-form-field>
-  </form>
+    <button mat-flat-button color="primary" ngClick="addTorrent()">Go</button>
+  </div>
+
+  <mat-divider></mat-divider>
 
   <div *ngFor="let t of torrentList" class="torrent__list">
-    {{ t | json }}
+    <mat-card>
+      <mat-card-subtitle>{{ t.name }}</mat-card-subtitle>
+      <mat-progress-bar
+        mode="determinate"
+        value="{{
+          (t.bytesCompleted / (t.bytesMissing + t.bytesCompleted)) * 100
+        }}"
+      >
+      </mat-progress-bar>
+    </mat-card>
   </div>
 </content>

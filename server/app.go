@@ -17,6 +17,7 @@ import (
 
 // TorrentState describes state of a single torrent download
 type TorrentState struct {
+	ID             int      `json:"id"`
 	Name           string   `json:"name"`
 	FileNames      []string `json:"filenames"`
 	BytesCompleted int64    `json:"bytesCompleted"`
