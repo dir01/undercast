@@ -66,6 +66,33 @@ func TestTorrentDownload(t *testing.T) {
 			BytesMissing:   9000,
 		}, reloaded)
 	})
+
+	t.Run("when torrent client finishes download, torrent state is 'DOWNLOADED'", func(t *testing.T) {
+		torrent := &Torrent{Source: "foo", State: "ADDED"}
+		app.Repository.SaveTorrent(torrent)
+		tm.callback(torrent.ID, server.TorrentState{
+			Name:           "Around the world in 80 days",
+			FileNames:      []string{"Chapter 1.mp3", "Chapter 2.mp3"},
+			BytesCompleted: 9300,
+			BytesMissing:   0,
+			Done:           true,
+		})
+
+		reloaded, err := app.Repository.GetTorrent(torrent.ID)
+		if err != nil {
+			t.Error(err)
+		}
+		assertDeepEquals(t, &Torrent{
+			ID:             torrent.ID,
+			State:          "DOWNLOADED",
+			Source:         "foo",
+			Name:           "Around the world in 80 days",
+			FileNames:      []string{"Chapter 1.mp3", "Chapter 2.mp3"},
+			BytesCompleted: 9300,
+			BytesMissing:   0,
+		}, reloaded)
+	})
+
 }
 
 func TestCreateTorrent(t *testing.T) {

@@ -152,6 +152,9 @@ func (a *App) setupTorrent() {
 			torrent.FileNames = state.FileNames
 			torrent.BytesCompleted = state.BytesCompleted
 			torrent.BytesMissing = state.BytesMissing
+			if state.Done {
+				torrent.markAsDownloaded()
+			}
 			a.Repository.SaveTorrent(torrent)
 		}
 	})
