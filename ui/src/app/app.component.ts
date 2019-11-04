@@ -12,7 +12,9 @@ export class AppComponent {
   title = 'undercast';
   torrentList: Torrent[] = [];
   torrent = new Torrent();
+  isTorrentFormOpen = false;
   websocket: WebSocketSubject<any> = webSocket('ws://localhost:8080/api/ws');
+
 
   constructor(private _apiService: apiService) { }
 
@@ -35,5 +37,10 @@ export class AppComponent {
     const savedTorrent = await this._apiService.addTorrent(this.torrent);
     this.torrentList.push(savedTorrent);
     this.torrent = new Torrent();
+    this.isTorrentFormOpen = false;
+  }
+
+  openTorrentForm() {
+    this.isTorrentFormOpen = true
   }
 }

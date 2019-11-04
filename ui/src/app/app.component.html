@@ -1,18 +1,18 @@
 <content>
   <mat-toolbar>
     <span>Undercast</span>
+    <span class="toolbar__spacer"></span>
+    <a (click)="openTorrentForm()">
+      <mat-icon>library_add</mat-icon>
+    </a>
   </mat-toolbar>
 
-  <div id="torrent__add">
+  <div *ngIf="isTorrentFormOpen" id="torrent__add">
     <mat-form-field appearance="outline">
-      <input
-        name="source"
-        [(ngModel)]="torrent.source"
-        placeholder="Magnet or link to .torrent"
-        matInput
-      />
+      <mat-label>Magnet or link to .torrent</mat-label>
+      <input name="source" [(ngModel)]="torrent.source" matInput />
     </mat-form-field>
-    <button mat-flat-button color="primary" ngClick="addTorrent()">Go</button>
+    <button mat-flat-button (click)="addTorrent()">Go</button>
   </div>
 
   <mat-divider></mat-divider>
