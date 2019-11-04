@@ -55,6 +55,26 @@ func (r *repository) updateTorrent(t *Torrent) error {
 	WHERE id=:id`, dt); err != nil {
 		return err
 	}
+	if len(t.Episodes) == 0 {
+		return nil
+	}
+	for _, ep := range t.Episodes {
+		if ep.ID != 0 {
+			continue
+		}
+		dEp := dbEpisodeFromEpisode(&ep, t.ID)
+		stmt, err := r.db.PrepareNamed(`INSERT INTO episodes (
+			torrent_id, name, filenames
+		) VALUES (
+			:torrent_id, :name, :filenames
+		) RETURNING id`)
+		if err != nil {
+			return err
+		}
+		if err = stmt.Get(&ep.ID, dEp); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -94,12 +114,50 @@ func (r *repository) queryToTorrents(query string, args interface{}) ([]Torrent,
 		return nil, err
 	}
 
+	episodesMap, err := r.getEpisodesMap(dbTorList)
+	if err != nil {
+		return nil, err
+	}
+
 	result := []Torrent{}
 	for _, dt := range dbTorList {
-		result = append(result, dt.toEntity())
+		t := dt.toEntity()
+		t.Episodes = episodesMap[t.ID]
+		result = append(result, t)
 	}
 	return result, nil
 
+}
+
+func (r *repository) getEpisodesMap(dbTorList []dbTorrent) (map[int][]Episode, error) {
+	result := make(map[int][]Episode)
+	if len(dbTorList) == 0 {
+		return result, nil
+	}
+
+	ids := []int{}
+	for _, tor := range dbTorList {
+		ids = append(ids, tor.ID)
+	}
+
+	query, args, err := sqlx.In("SELECT * FROM episodes WHERE torrent_id IN (?) ORDER BY id ASC", ids)
+	if err != nil {
+		return nil, err
+	}
+
+	dbEpisodesList := []dbEpisode{}
+	err = r.db.Select(&dbEpisodesList, r.db.Rebind(query), args...)
+
+	if err != nil {
+		return nil, err
+	}
+	for _, e := range dbEpisodesList {
+		if _, ok := result[e.TorrentID]; !ok {
+			result[e.TorrentID] = []Episode{}
+		}
+		result[e.TorrentID] = append(result[e.TorrentID], e.toEntity())
+	}
+	return result, nil
 }
 
 func (r *repository) deleteTorrent(id int) error {
@@ -115,21 +173,29 @@ func (r *repository) deleteTorrent(id int) error {
 }
 
 func (r *repository) createTables() {
-	const tableCreationQuery = `
-CREATE TABLE IF NOT EXISTS torrents (
-	id SERIAL PRIMARY KEY,
-	state VARCHAR(50),
-	source TEXT NOT NULL,
-	name VARCHAR(500),
-	filenames JSON,
-	bytes_completed BIGINT,
-	bytes_missing BIGINT
-    CONSTRAINT require_source CHECK (
-		(case when source is null or length(source) = 0 then FALSE else TRUE end)
-    )
-)`
-	if _, err := r.db.Exec(tableCreationQuery); err != nil {
-		log.Fatal(err)
+	tableCreationQueries := []string{`
+	CREATE TABLE IF NOT EXISTS torrents(
+		id SERIAL PRIMARY KEY,
+		state VARCHAR(50),
+		source TEXT NOT NULL,
+		name VARCHAR(500),
+		filenames JSON,
+		bytes_completed BIGINT,
+		bytes_missing BIGINT
+	    CONSTRAINT require_source CHECK (
+			(case when source is null or length(source) = 0 then FALSE else TRUE end)
+	    )
+	)`,
+		`CREATE TABLE IF NOT EXISTS episodes(
+		id SERIAL PRIMARY KEY,
+		torrent_id INT NOT NULL,
+		name TEXT NOT NULL,
+		filenames JSON
+	)`}
+	for _, query := range tableCreationQueries {
+		if _, err := r.db.Exec(query); err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
@@ -176,6 +242,29 @@ func (dt *dbTorrent) toEntity() Torrent {
 		FileNames:      unmarshalFilenames(dt.FileNames.String),
 		BytesCompleted: dt.BytesCompleted.Int64,
 		BytesMissing:   dt.BytesMissing.Int64,
+	}
+}
+
+type dbEpisode struct {
+	ID        int    `db:"id"`
+	TorrentID int    `db:"torrent_id"`
+	Name      string `db:"name"`
+	FileNames string `db:"filenames"`
+}
+
+func dbEpisodeFromEpisode(episode *Episode, torrentID int) *dbEpisode {
+	return &dbEpisode{
+		TorrentID: torrentID,
+		Name:      episode.Name,
+		FileNames: marshalFilenames(episode.FileNames),
+	}
+}
+
+func (d *dbEpisode) toEntity() Episode {
+	return Episode{
+		ID:        d.ID,
+		Name:      d.Name,
+		FileNames: unmarshalFilenames(d.FileNames),
 	}
 }
 

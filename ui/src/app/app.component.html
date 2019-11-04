@@ -1,10 +1,10 @@
 <content>
-  <mat-toolbar>
+  <mat-toolbar color="primary">
     <span>Undercast</span>
     <span class="toolbar__spacer"></span>
-    <a (click)="openTorrentForm()">
-      <mat-icon>library_add</mat-icon>
-    </a>
+    <button mat-raised-button (click)="openTorrentForm()">
+      <mat-icon>library_add</mat-icon> add torrent
+    </button>
   </mat-toolbar>
 
   <div *ngIf="isTorrentFormOpen" id="torrent__add">
@@ -27,6 +27,13 @@
         }}"
       >
       </mat-progress-bar>
+      <br />
+      <mat-card-subtitle>
+        {{ t.episodes.length }} episodes
+        <ul *ngFor="let e of t.episodes">
+          <li>{{ e.name }}</li>
+        </ul>
+      </mat-card-subtitle>
     </mat-card>
   </div>
 </content>

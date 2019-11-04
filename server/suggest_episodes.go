@@ -11,12 +11,12 @@ func suggestEpisodes(name string, filenames []string) (episodes []Episode) {
 	dirToFilesMap := filenamesToMap(filenames)
 	if len(dirToFilesMap) == 1 {
 		sort.Strings(filenames)
-		episodes = append(episodes, Episode{Name: name, Filenames: filenames})
+		episodes = append(episodes, Episode{Name: name, FileNames: filenames})
 		return
 	}
 	for dirname, filenames := range dirToFilesMap {
 		sort.Strings(filenames)
-		episodes = append(episodes, Episode{Name: dirname, Filenames: filenames})
+		episodes = append(episodes, Episode{Name: dirname, FileNames: filenames})
 	}
 	return
 }

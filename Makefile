@@ -15,5 +15,8 @@ runserver-dev: runserver
 build-ui:
 	time bash -c "cd ui; npm i; npm run build"
 
+run-ui:
+	cd ui; npm start
+
 build:
 	time go build -o ./bin/server ./cmd/server/main.go

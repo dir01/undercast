@@ -11,6 +11,7 @@ import (
 )
 
 type Torrent = server.Torrent
+type Episode = server.Episode
 
 var a *server.App
 
@@ -21,7 +22,7 @@ func TestMain(m *testing.M) {
 
 	code := m.Run()
 
-	dropTable()
+	dropTables()
 	os.Exit(code)
 }
 
@@ -41,12 +42,13 @@ func TestTorrentDownload(t *testing.T) {
 	})
 
 	t.Run("on each torrent client update torrent is updated in db", func(t *testing.T) {
+		clearTables()
 		torrent := &Torrent{Source: "foo", State: "ADDED"}
 		app.Repository.SaveTorrent(torrent)
 
 		tm.callback(torrent.ID, server.TorrentState{
 			Name:           "Around the world in 80 days",
-			FileNames:      []string{"Chapter 1.mp3", "Chapter 2.mp3"},
+			FileNames:      []string{"Chapter 1/all.mp3", "Chapter 2/all.mp3"},
 			BytesCompleted: 300,
 			BytesMissing:   9000,
 			Done:           false,
@@ -61,9 +63,55 @@ func TestTorrentDownload(t *testing.T) {
 			State:          "ADDED",
 			Source:         "foo",
 			Name:           "Around the world in 80 days",
-			FileNames:      []string{"Chapter 1.mp3", "Chapter 2.mp3"},
+			FileNames:      []string{"Chapter 1/all.mp3", "Chapter 2/all.mp3"},
 			BytesCompleted: 300,
 			BytesMissing:   9000,
+			Episodes: []Episode{
+				Episode{
+					ID:        1,
+					Name:      "Chapter 1",
+					FileNames: []string{"Chapter 1/all.mp3"},
+				},
+				Episode{
+					ID:        2,
+					Name:      "Chapter 2",
+					FileNames: []string{"Chapter 2/all.mp3"},
+				},
+			},
+		}, reloaded)
+
+		tm.callback(torrent.ID, server.TorrentState{
+			Name:           "Around the world in 80 days",
+			FileNames:      []string{"Chapter 1/all.mp3", "Chapter 2/all.mp3"},
+			BytesCompleted: 1300,
+			BytesMissing:   8000,
+			Done:           false,
+		})
+
+		reloaded, err = app.Repository.GetTorrent(torrent.ID)
+		if err != nil {
+			t.Error(err)
+		}
+		assertDeepEquals(t, &Torrent{
+			ID:             torrent.ID,
+			State:          "ADDED",
+			Source:         "foo",
+			Name:           "Around the world in 80 days",
+			FileNames:      []string{"Chapter 1/all.mp3", "Chapter 2/all.mp3"},
+			BytesCompleted: 1300,
+			BytesMissing:   8000,
+			Episodes: []Episode{
+				Episode{
+					ID:        1,
+					Name:      "Chapter 1",
+					FileNames: []string{"Chapter 1/all.mp3"},
+				},
+				Episode{
+					ID:        2,
+					Name:      "Chapter 2",
+					FileNames: []string{"Chapter 2/all.mp3"},
+				},
+			},
 		}, reloaded)
 	})
 
@@ -72,7 +120,6 @@ func TestTorrentDownload(t *testing.T) {
 		app.Repository.SaveTorrent(torrent)
 		tm.callback(torrent.ID, server.TorrentState{
 			Name:           "Around the world in 80 days",
-			FileNames:      []string{"Chapter 1.mp3", "Chapter 2.mp3"},
 			BytesCompleted: 9300,
 			BytesMissing:   0,
 			Done:           true,
@@ -87,7 +134,6 @@ func TestTorrentDownload(t *testing.T) {
 			State:          "DOWNLOADED",
 			Source:         "foo",
 			Name:           "Around the world in 80 days",
-			FileNames:      []string{"Chapter 1.mp3", "Chapter 2.mp3"},
 			BytesCompleted: 9300,
 			BytesMissing:   0,
 		}, reloaded)
@@ -97,14 +143,14 @@ func TestTorrentDownload(t *testing.T) {
 
 func TestCreateTorrent(t *testing.T) {
 	t.Run("from source field", func(t *testing.T) {
-		clearTable()
+		clearTables()
 		tor := setupTorrentMock(a)
 
 		payload := []byte(`{ "source": "magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c" }`)
 		response := getResponse("POST", "/api/torrents", bytes.NewBuffer(payload))
 
 		checkResponse(t, response, http.StatusCreated,
-			`{"id":1,"state":"ADDED","name":"","source":"magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c","filenames":null,"bytesCompleted":0,"bytesMissing":0}`,
+			`{"id":1,"state":"ADDED","name":"","source":"magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c","filenames":null,"bytesCompleted":0,"bytesMissing":0,"episodes":null}`,
 		)
 		tor.assertTorrentAdded(t, 1, "magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c")
 	})
@@ -121,7 +167,7 @@ func TestCreateTorrent(t *testing.T) {
 
 func TestListTorrents(t *testing.T) {
 	t.Run("paginated queries", func(t *testing.T) {
-		clearTable()
+		clearTables()
 
 		a.Repository.SaveTorrent(&Torrent{Source: "a"})
 		a.Repository.SaveTorrent(&Torrent{Source: "b"})
@@ -136,7 +182,7 @@ func TestListTorrents(t *testing.T) {
 	})
 
 	t.Run("empty table results in empty array", func(t *testing.T) {
-		clearTable()
+		clearTables()
 
 		response := getResponse("GET", "/api/torrents", nil)
 
@@ -146,7 +192,7 @@ func TestListTorrents(t *testing.T) {
 
 func TestDeleteTorrent(t *testing.T) {
 	t.Run("successful deletion", func(t *testing.T) {
-		clearTable()
+		clearTables()
 		torrent := &Torrent{Source: "something"}
 		a.Repository.SaveTorrent(torrent)
 

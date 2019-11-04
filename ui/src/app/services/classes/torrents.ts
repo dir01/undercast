@@ -5,5 +5,6 @@ export class Torrent {
   files: string[];
   bytesComplete: number;
   bytesMissing: number;
+  episods: Object[];
   done: boolean;
 }

@@ -11,11 +11,15 @@ func getDB(dbURL string) *sql.DB {
 	}
 }
 
-func clearTable() {
+func clearTables() {
 	a.DB.Exec("DELETE FROM torrents")
 	a.DB.Exec("ALTER SEQUENCE torrents_id_seq RESTART WITH 1")
+	a.DB.Exec("DELETE FROM episodes")
+	a.DB.Exec("ALTER SEQUENCE episodes_id_seq RESTART WITH 1")
+	
 }
 
-func dropTable() {
+func dropTables() {
 	a.DB.Exec("DROP TABLE torrents")
+	a.DB.Exec("DROP TABLE episodes")
 }

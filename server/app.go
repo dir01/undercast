@@ -17,7 +17,6 @@ import (
 
 // TorrentState describes state of a single torrent download
 type TorrentState struct {
-	ID             int      `json:"id"`
 	Name           string   `json:"name"`
 	FileNames      []string `json:"filenames"`
 	BytesCompleted int64    `json:"bytesCompleted"`
@@ -135,7 +134,6 @@ func (a *App) handleWebsocket() http.HandlerFunc {
 		if err != nil {
 			log.Println(err)
 		}
-		log.Println("Websocket connection established")
 		a.wsConnectionsMutex.Lock()
 		a.wsConnections = append(a.wsConnections, ws)
 		a.wsConnectionsMutex.Unlock()
@@ -144,19 +142,22 @@ func (a *App) handleWebsocket() http.HandlerFunc {
 
 func (a *App) setupTorrent() {
 	a.Torrent.OnTorrentChanged(func(id int, state TorrentState) {
-		a.dispatchWebsocketMessage(state)
-		if torrent, err := a.Repository.GetTorrent(id); err != nil {
-			log.Print("Failed to fetch torrent ", id, err)
-		} else {
-			torrent.Name = state.Name
-			torrent.FileNames = state.FileNames
-			torrent.BytesCompleted = state.BytesCompleted
-			torrent.BytesMissing = state.BytesMissing
-			if state.Done {
-				torrent.markAsDownloaded()
-			}
-			a.Repository.SaveTorrent(torrent)
+		torrent, err := a.Repository.GetTorrent(id)
+		if err != nil {
+			log.Print("Failed to get torrent from repository", id, err)
+			return
 		}
+		torrent.Name = state.Name
+		torrent.FileNames = state.FileNames
+		torrent.BytesCompleted = state.BytesCompleted
+		torrent.BytesMissing = state.BytesMissing
+		if state.Done {
+			torrent.markAsDownloaded()
+		}
+
+		torrent.maybeSetDefaultEpisodes()
+		a.Repository.SaveTorrent(torrent)
+		a.dispatchWebsocketMessage(torrent)
 	})
 	if torrents, err := a.Repository.getUnfinisedTorrents(); err != nil {
 		log.Fatal("Failed to get unfinished torrents\n", err)
@@ -175,8 +176,6 @@ func (a *App) dispatchWebsocketMessage(message interface{}) {
 		if err := ws.WriteMessage(1, bytes); err == nil {
 			a.wsConnections[i] = ws
 			i++
-		} else {
-			log.Println("Removing ws connections due to error:\n", err)
 		}
 	}
 	a.wsConnections = a.wsConnections[:i]
