@@ -15,14 +15,6 @@ import (
 	_ "github.com/lib/pq" //
 )
 
-// TorrentState describes state of a single torrent download
-type TorrentState struct {
-	Name           string   `json:"name"`
-	FileNames      []string `json:"filenames"`
-	BytesCompleted int64    `json:"bytesCompleted"`
-	BytesMissing   int64    `json:"bytesMissing"`
-	Done           bool     `json:"done"`
-}
 
 // TorrentClient allows to download torrents and to subscribe on its state changes
 type TorrentClient interface {
@@ -84,16 +76,15 @@ func (a *App) getTorrentsList() http.HandlerFunc {
 
 func (a *App) createTorrent() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var t Torrent
+		t := NewTorrent()
 		decoder := json.NewDecoder(r.Body)
-		if err := decoder.Decode(&t); err != nil {
+		if err := decoder.Decode(t); err != nil {
 			respondWithError(w, http.StatusBadRequest, "Invalid request payload")
 			return
 		}
 		defer r.Body.Close()
 
-		t.State = "ADDED"
-		if err := a.Repository.SaveTorrent(&t); err != nil {
+		if err := a.Repository.SaveTorrent(t); err != nil {
 			respondWithError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -147,15 +138,7 @@ func (a *App) setupTorrent() {
 			log.Print("Failed to get torrent from repository", id, err)
 			return
 		}
-		torrent.Name = state.Name
-		torrent.FileNames = state.FileNames
-		torrent.BytesCompleted = state.BytesCompleted
-		torrent.BytesMissing = state.BytesMissing
-		if state.Done {
-			torrent.markAsDownloaded()
-		}
-
-		torrent.maybeSetDefaultEpisodes()
+		torrent.UpdateFromTorrentState(state)
 		a.Repository.SaveTorrent(torrent)
 		a.dispatchWebsocketMessage(torrent)
 	})

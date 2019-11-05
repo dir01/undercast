@@ -5,6 +5,7 @@ type state string
 const added state = "ADDED"
 const downloaded state = "DOWNLOADED"
 
+// Torrent represents a lifecycle of a single torrent download
 type Torrent struct {
 	ID             int       `json:"id"`
 	State          state     `json:"state"`
@@ -16,12 +17,21 @@ type Torrent struct {
 	Episodes       []Episode `json:"episodes"`
 }
 
-func (t *Torrent) markAsAdded() {
-	t.State = added
+// NewTorrent creates new Torrent instance
+func NewTorrent() *Torrent {
+	return &Torrent{State: added}
 }
 
-func (t *Torrent) markAsDownloaded() {
-	t.State = downloaded
+// UpdateFromTorrentState updates Torrent based on data in TorrentState
+func (t *Torrent) UpdateFromTorrentState(state TorrentState) {
+	t.Name = state.Name
+	t.FileNames = state.FileNames
+	t.BytesCompleted = state.BytesCompleted
+	t.BytesMissing = state.BytesMissing
+	if state.Done {
+		t.State = downloaded
+	}
+	t.maybeSetDefaultEpisodes()
 }
 
 func (t *Torrent) maybeSetDefaultEpisodes() {
@@ -29,6 +39,15 @@ func (t *Torrent) maybeSetDefaultEpisodes() {
 		return
 	}
 	t.Episodes = suggestEpisodes(t.Name, t.FileNames)
+}
+
+// TorrentState is intended for progress reporting
+type TorrentState struct {
+	Name           string   `json:"name"`
+	FileNames      []string `json:"filenames"`
+	BytesCompleted int64    `json:"bytesCompleted"`
+	BytesMissing   int64    `json:"bytesMissing"`
+	Done           bool     `json:"done"`
 }
 
 type Episode struct {
