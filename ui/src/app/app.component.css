@@ -12,3 +12,12 @@
   flex-direction: column;
   padding: 16px;
 }
+
+.torrent__panel-title {
+  display: flex;
+  flex-direction: column;
+}
+
+.torrent__episodes-count {
+  margin-top: 8px;
+}

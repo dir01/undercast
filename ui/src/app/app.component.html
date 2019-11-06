@@ -17,23 +17,23 @@
 
   <mat-divider></mat-divider>
 
-  <div *ngFor="let t of torrentList" class="torrent__list">
-    <mat-card>
-      <mat-card-subtitle>{{ t.name }}</mat-card-subtitle>
-      <mat-progress-bar
-        mode="determinate"
-        value="{{
-          (t.bytesCompleted / (t.bytesMissing + t.bytesCompleted)) * 100
-        }}"
-      >
-      </mat-progress-bar>
-      <br />
-      <mat-card-subtitle>
-        {{ t.episodes.length }} episodes
-        <ul *ngFor="let e of t.episodes">
-          <li>{{ e.name }}</li>
-        </ul>
-      </mat-card-subtitle>
-    </mat-card>
-  </div>
+  <mat-accordion *ngFor="let t of torrentList" class="torrent__list" displayMode="flat">
+    <mat-expansion-panel>
+      <mat-expansion-panel-header [collapsedHeight]="'80px'" [expandedHeight]="'72px'">
+        <mat-panel-title class="torrent__panel-title">
+          <span>{{ t.name }}</span>
+          <span class="torrent__episodes-count">{{ t.episodes.length }} episodes</span>
+        </mat-panel-title>
+      </mat-expansion-panel-header>
+      <ul *ngFor="let e of t.episodes">
+        <li>{{e.name}}</li>
+      </ul>
+    </mat-expansion-panel>
+
+    <mat-progress-bar mode="determinate" value="{{
+      (t.bytesCompleted / (t.bytesMissing + t.bytesCompleted)) * 100
+    }}">
+    </mat-progress-bar>
+
+  </mat-accordion>
 </content>
