@@ -22,9 +22,8 @@ func newRepository(db *sql.DB) *repository {
 func (r *repository) SaveTorrent(t *Torrent) error {
 	if t.ID == 0 {
 		return r.insertTorrent(t)
-	} else {
-		return r.updateTorrent(t)
 	}
+	return r.updateTorrent(t)
 }
 
 func (r *repository) insertTorrent(t *Torrent) error {
@@ -89,8 +88,8 @@ func (r *repository) GetTorrent(id int) (*Torrent, error) {
 	return &torrents[0], nil
 }
 
-func (r *repository) getUnfinisedTorrents() ([]Torrent, error) {
-	return r.queryToTorrents("SELECT * from torrents WHERE state='ADDED'", nil)
+func (r *repository) getDownloadingTorrents() ([]Torrent, error) {
+	return r.queryToTorrents("SELECT * from torrents WHERE state='DOWNLOADING'", nil)
 }
 
 func (r *repository) getTorrentsList(start, count int) ([]Torrent, error) {

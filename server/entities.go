@@ -2,8 +2,9 @@ package server
 
 type state string
 
-const added state = "ADDED"
-const downloaded state = "DOWNLOADED"
+const downloading state = "DOWNLOADING"
+const enconding state = "ENCODING"
+const published state = "PUBLISHED"
 
 // Torrent represents a lifecycle of a single torrent download
 type Torrent struct {
@@ -19,7 +20,7 @@ type Torrent struct {
 
 // NewTorrent creates new Torrent instance
 func NewTorrent() *Torrent {
-	return &Torrent{State: added}
+	return &Torrent{State: downloading}
 }
 
 // UpdateFromTorrentState updates Torrent based on data in TorrentState
@@ -29,7 +30,7 @@ func (t *Torrent) UpdateFromTorrentState(state TorrentState) {
 	t.BytesCompleted = state.BytesCompleted
 	t.BytesMissing = state.BytesMissing
 	if state.Done {
-		t.State = downloaded
+		t.State = enconding
 	}
 	t.maybeSetDefaultEpisodes()
 }

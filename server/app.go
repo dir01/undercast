@@ -15,7 +15,6 @@ import (
 	_ "github.com/lib/pq" //
 )
 
-
 // TorrentClient allows to download torrents and to subscribe on its state changes
 type TorrentClient interface {
 	AddTorrent(id int, magnetOrTorrentOrLink string) error
@@ -133,16 +132,20 @@ func (a *App) handleWebsocket() http.HandlerFunc {
 
 func (a *App) setupTorrent() {
 	a.Torrent.OnTorrentChanged(func(id int, state TorrentState) {
-		torrent, err := a.Repository.GetTorrent(id)
-		if err != nil {
+		if torrent, err := a.Repository.GetTorrent(id); err == nil {
+			torrent.UpdateFromTorrentState(state)
+			a.Repository.SaveTorrent(torrent)
+			a.dispatchWebsocketMessage(torrent)
+		} else {
 			log.Print("Failed to get torrent from repository", id, err)
-			return
 		}
-		torrent.UpdateFromTorrentState(state)
-		a.Repository.SaveTorrent(torrent)
-		a.dispatchWebsocketMessage(torrent)
 	})
-	if torrents, err := a.Repository.getUnfinisedTorrents(); err != nil {
+
+	a.restartUnfinishedTorrents()
+}
+
+func (a *App) restartUnfinishedTorrents() {
+	if torrents, err := a.Repository.getDownloadingTorrents(); err != nil {
 		log.Fatal("Failed to get unfinished torrents\n", err)
 	} else {
 		for _, t := range torrents {

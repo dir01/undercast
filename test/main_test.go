@@ -27,9 +27,9 @@ func TestMain(m *testing.M) {
 }
 
 func TestTorrentDownload(t *testing.T) {
-	id1 := insertTorrent("source 1", "ADDED")
-	id2 := insertTorrent("source 2", "ADDED")
-	id3 := insertTorrent("source 3", "DOWNLOADED")
+	id1 := insertTorrent("source 1", "DOWNLOADING")
+	id2 := insertTorrent("source 2", "DOWNLOADING")
+	id3 := insertTorrent("source 3", "ENCODING")
 
 	app := &server.App{}
 	tm := setupTorrentMock(app)
@@ -43,7 +43,7 @@ func TestTorrentDownload(t *testing.T) {
 
 	t.Run("on each torrent client update torrent is updated in db", func(t *testing.T) {
 		clearTables()
-		torrent := &Torrent{Source: "foo", State: "ADDED"}
+		torrent := &Torrent{Source: "foo", State: "DOWNLOADING"}
 		app.Repository.SaveTorrent(torrent)
 
 		tm.callback(torrent.ID, server.TorrentState{
@@ -60,7 +60,7 @@ func TestTorrentDownload(t *testing.T) {
 		}
 		assertDeepEquals(t, &Torrent{
 			ID:             torrent.ID,
-			State:          "ADDED",
+			State:          "DOWNLOADING",
 			Source:         "foo",
 			Name:           "Around the world in 80 days",
 			FileNames:      []string{"Chapter 1/all.mp3", "Chapter 2/all.mp3"},
@@ -94,7 +94,7 @@ func TestTorrentDownload(t *testing.T) {
 		}
 		assertDeepEquals(t, &Torrent{
 			ID:             torrent.ID,
-			State:          "ADDED",
+			State:          "DOWNLOADING",
 			Source:         "foo",
 			Name:           "Around the world in 80 days",
 			FileNames:      []string{"Chapter 1/all.mp3", "Chapter 2/all.mp3"},
@@ -115,8 +115,8 @@ func TestTorrentDownload(t *testing.T) {
 		}, reloaded)
 	})
 
-	t.Run("when torrent client finishes download, torrent state is 'DOWNLOADED'", func(t *testing.T) {
-		torrent := &Torrent{Source: "foo", State: "ADDED"}
+	t.Run("when torrent client finishes download, torrent state is DOWNLOAD_COMPLETE", func(t *testing.T) {
+		torrent := &Torrent{Source: "foo", State: "DOWNLOADING"}
 		app.Repository.SaveTorrent(torrent)
 		tm.callback(torrent.ID, server.TorrentState{
 			Name:           "Around the world in 80 days",
@@ -131,7 +131,7 @@ func TestTorrentDownload(t *testing.T) {
 		}
 		assertDeepEquals(t, &Torrent{
 			ID:             torrent.ID,
-			State:          "DOWNLOADED",
+			State:          "ENCODING",
 			Source:         "foo",
 			Name:           "Around the world in 80 days",
 			BytesCompleted: 9300,
@@ -150,7 +150,7 @@ func TestCreateTorrent(t *testing.T) {
 		response := getResponse("POST", "/api/torrents", bytes.NewBuffer(payload))
 
 		checkResponse(t, response, http.StatusCreated,
-			`{"id":1,"state":"ADDED","name":"","source":"magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c","filenames":null,"bytesCompleted":0,"bytesMissing":0,"episodes":null}`,
+			`{"id":1,"state":"DOWNLOADING","name":"","source":"magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c","filenames":null,"bytesCompleted":0,"bytesMissing":0,"episodes":null}`,
 		)
 		tor.assertTorrentAdded(t, 1, "magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c")
 	})
