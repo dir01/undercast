@@ -6,26 +6,27 @@ import (
 	"strings"
 )
 
-
-func suggestEpisodes(name string, filenames []string) (episodes []Episode) {
-	dirToFilesMap := filenamesToMap(filenames)
+func suggestEpisodes(name string, filepaths []string) (episodes []Episode) {
+	dirToFilesMap := filepathsToMap(filepaths)
 	if len(dirToFilesMap) == 1 {
-		sort.Strings(filenames)
-		episodes = append(episodes, Episode{Name: name, FileNames: filenames})
+		sort.Strings(filepaths)
+		episodes = append(episodes, Episode{Name: name, FilePaths: filepaths})
 		return
 	}
-	for dirname, filenames := range dirToFilesMap {
-		sort.Strings(filenames)
-		episodes = append(episodes, Episode{Name: dirname, FileNames: filenames})
+	for dirname, filepaths := range dirToFilesMap {
+		sort.Strings(filepaths)
+		episodes = append(episodes, Episode{Name: dirname, FilePaths: filepaths})
 	}
 	return
 }
 
-func filenamesToMap(filenames []string) map[string][]string {
+func filepathsToMap(filepaths []string) map[string][]string {
 	result := map[string][]string{}
-	for _, f := range filenames {
+	for _, f := range filepaths {
 		dirname, _ := path.Split(f)
 		dirname = strings.Trim(dirname, "/")
+		bits := strings.Split(dirname, "/")
+		dirname = bits[len(bits)-1]
 		if result[dirname] == nil {
 			result[dirname] = []string{}
 		}

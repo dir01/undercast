@@ -48,7 +48,7 @@ func TestTorrentDownload(t *testing.T) {
 
 		tm.callback(torrent.ID, server.TorrentState{
 			Name:           "Around the world in 80 days",
-			FileNames:      []string{"Chapter 1/all.mp3", "Chapter 2/all.mp3"},
+			FilePaths:      []string{"Chapter 1/all.mp3", "Chapter 2/all.mp3"},
 			BytesCompleted: 300,
 			BytesMissing:   9000,
 			Done:           false,
@@ -63,26 +63,26 @@ func TestTorrentDownload(t *testing.T) {
 			State:          "DOWNLOADING",
 			Source:         "foo",
 			Name:           "Around the world in 80 days",
-			FileNames:      []string{"Chapter 1/all.mp3", "Chapter 2/all.mp3"},
+			FilePaths:      []string{"Chapter 1/all.mp3", "Chapter 2/all.mp3"},
 			BytesCompleted: 300,
 			BytesMissing:   9000,
 			Episodes: []Episode{
 				Episode{
 					ID:        1,
 					Name:      "Chapter 1",
-					FileNames: []string{"Chapter 1/all.mp3"},
+					FilePaths: []string{"Chapter 1/all.mp3"},
 				},
 				Episode{
 					ID:        2,
 					Name:      "Chapter 2",
-					FileNames: []string{"Chapter 2/all.mp3"},
+					FilePaths: []string{"Chapter 2/all.mp3"},
 				},
 			},
 		}, reloaded)
 
 		tm.callback(torrent.ID, server.TorrentState{
 			Name:           "Around the world in 80 days",
-			FileNames:      []string{"Chapter 1/all.mp3", "Chapter 2/all.mp3"},
+			FilePaths:      []string{"Chapter 1/all.mp3", "Chapter 2/all.mp3"},
 			BytesCompleted: 1300,
 			BytesMissing:   8000,
 			Done:           false,
@@ -97,19 +97,19 @@ func TestTorrentDownload(t *testing.T) {
 			State:          "DOWNLOADING",
 			Source:         "foo",
 			Name:           "Around the world in 80 days",
-			FileNames:      []string{"Chapter 1/all.mp3", "Chapter 2/all.mp3"},
+			FilePaths:      []string{"Chapter 1/all.mp3", "Chapter 2/all.mp3"},
 			BytesCompleted: 1300,
 			BytesMissing:   8000,
 			Episodes: []Episode{
 				Episode{
 					ID:        1,
 					Name:      "Chapter 1",
-					FileNames: []string{"Chapter 1/all.mp3"},
+					FilePaths: []string{"Chapter 1/all.mp3"},
 				},
 				Episode{
 					ID:        2,
 					Name:      "Chapter 2",
-					FileNames: []string{"Chapter 2/all.mp3"},
+					FilePaths: []string{"Chapter 2/all.mp3"},
 				},
 			},
 		}, reloaded)
@@ -150,7 +150,7 @@ func TestCreateTorrent(t *testing.T) {
 		response := getResponse("POST", "/api/torrents", bytes.NewBuffer(payload))
 
 		checkResponse(t, response, http.StatusCreated,
-			`{"id":1,"state":"DOWNLOADING","name":"","source":"magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c","filenames":null,"bytesCompleted":0,"bytesMissing":0,"episodes":null}`,
+			`{"id":1,"state":"DOWNLOADING","name":"","source":"magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c","filepaths":null,"bytesCompleted":0,"bytesMissing":0,"episodes":null}`,
 		)
 		tor.assertTorrentAdded(t, 1, "magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c")
 	})

@@ -12,7 +12,7 @@ type Torrent struct {
 	State          state     `json:"state"`
 	Name           string    `json:"name"`
 	Source         string    `json:"source"`
-	FileNames      []string  `json:"filenames"`
+	FilePaths      []string  `json:"filepaths"`
 	BytesCompleted int64     `json:"bytesCompleted"`
 	BytesMissing   int64     `json:"bytesMissing"`
 	Episodes       []Episode `json:"episodes"`
@@ -26,7 +26,7 @@ func NewTorrent() *Torrent {
 // UpdateFromTorrentState updates Torrent based on data in TorrentState
 func (t *Torrent) UpdateFromTorrentState(state TorrentState) {
 	t.Name = state.Name
-	t.FileNames = state.FileNames
+	t.FilePaths = state.FilePaths
 	t.BytesCompleted = state.BytesCompleted
 	t.BytesMissing = state.BytesMissing
 	if state.Done {
@@ -36,16 +36,16 @@ func (t *Torrent) UpdateFromTorrentState(state TorrentState) {
 }
 
 func (t *Torrent) maybeSetDefaultEpisodes() {
-	if len(t.Episodes) > 0 || len(t.FileNames) == 0 {
+	if len(t.Episodes) > 0 || len(t.FilePaths) == 0 {
 		return
 	}
-	t.Episodes = suggestEpisodes(t.Name, t.FileNames)
+	t.Episodes = suggestEpisodes(t.Name, t.FilePaths)
 }
 
 // TorrentState is intended for progress reporting
 type TorrentState struct {
 	Name           string   `json:"name"`
-	FileNames      []string `json:"filenames"`
+	FilePaths      []string `json:"filepaths"`
 	BytesCompleted int64    `json:"bytesCompleted"`
 	BytesMissing   int64    `json:"bytesMissing"`
 	Done           bool     `json:"done"`
@@ -54,5 +54,5 @@ type TorrentState struct {
 type Episode struct {
 	ID        int      `json:"id"`
 	Name      string   `json:"name"`
-	FileNames []string `json:"filenames"`
+	FilePaths []string `json:"filepaths"`
 }

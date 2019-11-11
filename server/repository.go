@@ -29,9 +29,9 @@ func (r *repository) SaveTorrent(t *Torrent) error {
 func (r *repository) insertTorrent(t *Torrent) error {
 	dt := dbTorrentFromTorrent(t)
 	stmt, err := r.db.PrepareNamed(`INSERT INTO torrents(
-			state, name, source, filenames, bytes_completed, bytes_missing
+			state, name, source, filepaths, bytes_completed, bytes_missing
 		) VALUES (
-			:state, :name, :source, :filenames, :bytes_completed, :bytes_missing
+			:state, :name, :source, :filepaths, :bytes_completed, :bytes_missing
 		) RETURNING id`)
 	if err != nil {
 		return err
@@ -48,7 +48,7 @@ func (r *repository) updateTorrent(t *Torrent) error {
 		state=:state,
 		name=:name,
 		source=:source,
-		filenames=:filenames,
+		filepaths=:filepaths,
 		bytes_completed=:bytes_completed,
 		bytes_missing=:bytes_missing
 	WHERE id=:id`, dt); err != nil {
@@ -63,9 +63,9 @@ func (r *repository) updateTorrent(t *Torrent) error {
 		}
 		dEp := dbEpisodeFromEpisode(&ep, t.ID)
 		stmt, err := r.db.PrepareNamed(`INSERT INTO episodes (
-			torrent_id, name, filenames
+			torrent_id, name, filepaths
 		) VALUES (
-			:torrent_id, :name, :filenames
+			:torrent_id, :name, :filepaths
 		) RETURNING id`)
 		if err != nil {
 			return err
@@ -178,7 +178,7 @@ func (r *repository) createTables() {
 		state VARCHAR(50),
 		source TEXT NOT NULL,
 		name VARCHAR(500),
-		filenames JSON,
+		filepaths JSON,
 		bytes_completed BIGINT,
 		bytes_missing BIGINT
 	    CONSTRAINT require_source CHECK (
@@ -189,7 +189,7 @@ func (r *repository) createTables() {
 		id SERIAL PRIMARY KEY,
 		torrent_id INT NOT NULL,
 		name TEXT NOT NULL,
-		filenames JSON
+		filepaths JSON
 	)`}
 	for _, query := range tableCreationQueries {
 		if _, err := r.db.Exec(query); err != nil {
@@ -203,7 +203,7 @@ type dbTorrent struct {
 	State          string         `db:"state"`
 	Source         string         `db:"source"`
 	Name           sql.NullString `db:"name"`
-	FileNames      sql.NullString `db:"filenames"`
+	FilePaths      sql.NullString `db:"filepaths"`
 	BytesCompleted sql.NullInt64  `db:"bytes_completed"`
 	BytesMissing   sql.NullInt64  `db:"bytes_missing"`
 }
@@ -217,8 +217,8 @@ func dbTorrentFromTorrent(t *Torrent) *dbTorrent {
 			Valid:  true,
 		},
 		Source: t.Source,
-		FileNames: sql.NullString{
-			String: marshalFilenames(t.FileNames),
+		FilePaths: sql.NullString{
+			String: marshalFilepaths(t.FilePaths),
 			Valid:  true,
 		},
 		BytesCompleted: sql.NullInt64{
@@ -238,7 +238,7 @@ func (dt *dbTorrent) toEntity() Torrent {
 		State:          state(dt.State),
 		Name:           dt.Name.String,
 		Source:         dt.Source,
-		FileNames:      unmarshalFilenames(dt.FileNames.String),
+		FilePaths:      unmarshalFilepaths(dt.FilePaths.String),
 		BytesCompleted: dt.BytesCompleted.Int64,
 		BytesMissing:   dt.BytesMissing.Int64,
 	}
@@ -248,14 +248,14 @@ type dbEpisode struct {
 	ID        int    `db:"id"`
 	TorrentID int    `db:"torrent_id"`
 	Name      string `db:"name"`
-	FileNames string `db:"filenames"`
+	FilePaths string `db:"filepaths"`
 }
 
 func dbEpisodeFromEpisode(episode *Episode, torrentID int) *dbEpisode {
 	return &dbEpisode{
 		TorrentID: torrentID,
 		Name:      episode.Name,
-		FileNames: marshalFilenames(episode.FileNames),
+		FilePaths: marshalFilepaths(episode.FilePaths),
 	}
 }
 
@@ -263,23 +263,23 @@ func (d *dbEpisode) toEntity() Episode {
 	return Episode{
 		ID:        d.ID,
 		Name:      d.Name,
-		FileNames: unmarshalFilenames(d.FileNames),
+		FilePaths: unmarshalFilepaths(d.FilePaths),
 	}
 }
 
-func marshalFilenames(filenames []string) string {
-	if f, err := json.Marshal(filenames); err != nil {
+func marshalFilepaths(filepaths []string) string {
+	if f, err := json.Marshal(filepaths); err != nil {
 		panic(err)
 	} else {
 		return string(f)
 	}
 }
 
-func unmarshalFilenames(fnStr string) (filenames []string) {
+func unmarshalFilepaths(fnStr string) (filepaths []string) {
 	if fnStr == "" {
 		return nil
 	}
-	err := json.Unmarshal([]byte(fnStr), &filenames)
+	err := json.Unmarshal([]byte(fnStr), &filepaths)
 	if err != nil {
 		panic(err)
 	}

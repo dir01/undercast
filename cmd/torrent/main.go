@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"undercast/bittorrent"
@@ -10,11 +9,11 @@ import (
 )
 
 func main() {
-	c, _ := bittorrent.NewClient(os.Getenv("DATA_DIR"))
+	c, _ := bittorrent.NewClient("/tmp")
 
 	downloading := true
 
-	c.AddTorrent(11, os.Args[1])
+	c.AddTorrent(11, "/Users/dir01/Projects/undercast/bittorrent/harrypotter.torrent")
 	c.OnTorrentChanged(func(id int, info server.TorrentState) {
 		fmt.Println("Got info", id, info)
 		if info.Done {

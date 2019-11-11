@@ -1,6 +1,8 @@
 package bittorrent
 
 import (
+	"fmt"
+	"path"
 	"strings"
 	"time"
 
@@ -8,7 +10,6 @@ import (
 
 	"github.com/anacrolix/torrent"
 	anacrolix "github.com/anacrolix/torrent"
-	anacrolixMetainfo "github.com/anacrolix/torrent/metainfo"
 )
 
 // NewClient creates new Client
@@ -16,6 +17,7 @@ func NewClient(dataDir string) (server.TorrentClient, error) {
 	c := &torrentClient{}
 	cfg := anacrolix.NewDefaultClientConfig()
 	cfg.DataDir = dataDir
+	c.dataDir = dataDir
 	tc, err := torrent.NewClient(cfg)
 	c.client = tc
 	c.torrentsMap = make(map[int]*anacrolix.Torrent)
@@ -26,6 +28,7 @@ type torrentClient struct {
 	client      *anacrolix.Client
 	torrentsMap map[int]*anacrolix.Torrent
 	callback    func(id int, state server.TorrentState)
+	dataDir     string
 }
 
 func (tc *torrentClient) AddTorrent(id int, magnetOrURLOrTorrent string) error {
@@ -45,10 +48,11 @@ func (tc *torrentClient) AddTorrent(id int, magnetOrURLOrTorrent string) error {
 
 	go func() {
 		<-t.GotInfo()
+		fmt.Println(t.Files()[0].Path())
 		i := t.Info()
 		state := &server.TorrentState{
 			Name:           i.Name,
-			FileNames:      copyFileNames(i),
+			FilePaths:      copyFilePaths(t, tc.dataDir),
 			BytesCompleted: t.BytesCompleted(),
 			BytesMissing:   t.BytesMissing(),
 			Done:           false,
@@ -76,9 +80,9 @@ func (tc *torrentClient) OnTorrentChanged(callback func(id int, state server.Tor
 	tc.callback = callback
 }
 
-func copyFileNames(i *anacrolixMetainfo.Info) (filenames []string) {
-	for _, f := range i.Files {
-		filenames = append(filenames, f.DisplayPath(i))
+func copyFilePaths(t *anacrolix.Torrent, root string) (filepaths []string) {
+	for _, f := range t.Files() {
+		filepaths = append(filepaths, path.Join(root, f.Path()))
 	}
 	return
 }
