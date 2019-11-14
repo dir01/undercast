@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"strconv"
 	"sync"
 
@@ -28,6 +29,8 @@ type App struct {
 	DB         *sql.DB
 	Repository *repository
 	Torrent    TorrentClient
+	encoder    func(episode Episode) (string, error)
+	uploader   func(filename string) (string, error)
 
 	uiDevServerURL     string
 	wsConnections      []*websocket.Conn
@@ -136,12 +139,39 @@ func (a *App) setupTorrent() {
 			torrent.UpdateFromTorrentState(state)
 			a.Repository.SaveTorrent(torrent)
 			a.dispatchWebsocketMessage(torrent)
+			if torrent.CanStartEncoding() {
+				go a.encodeTorrentEpisodes(torrent)
+			}
 		} else {
 			log.Print("Failed to get torrent from repository", id, err)
 		}
 	})
 
 	a.restartUnfinishedTorrents()
+}
+
+func (a *App) encodeTorrentEpisodes(torrent *Torrent) {
+	wg := &sync.WaitGroup{}
+	wg.Add(len(torrent.Episodes))
+	for _, e := range torrent.Episodes {
+		go func(e Episode, wg *sync.WaitGroup) {
+			encodedFilename, err := a.encoder(e)
+			if err != nil {
+				log.Printf("Failed to encode episode %d: %v", e.ID, err)
+			}
+			URL, err := a.uploader(encodedFilename)
+			if err != nil {
+				log.Printf("Failed to upload result file of episode %d:\n%v", e.ID, err)
+			}
+			e.MediaURL = URL
+			os.Remove(encodedFilename)
+			wg.Done()
+		}(e, wg)
+	}
+
+	wg.Wait()
+	torrent.State = "PUBLISHED"
+	a.Repository.SaveTorrent(torrent)
 }
 
 func (a *App) restartUnfinishedTorrents() {

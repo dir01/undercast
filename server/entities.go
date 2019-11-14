@@ -35,6 +35,11 @@ func (t *Torrent) UpdateFromTorrentState(state TorrentState) {
 	t.maybeSetDefaultEpisodes()
 }
 
+// CanStartEncoding tells whether the torren is ready to be encoded
+func (t *Torrent) CanStartEncoding() bool {
+	return t.State == enconding
+}
+
 func (t *Torrent) maybeSetDefaultEpisodes() {
 	if len(t.Episodes) > 0 || len(t.FilePaths) == 0 {
 		return
@@ -55,4 +60,5 @@ type Episode struct {
 	ID        int      `json:"id"`
 	Name      string   `json:"name"`
 	FilePaths []string `json:"filepaths"`
+	MediaURL       string   `json:"mediaUrl"`
 }

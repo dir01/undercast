@@ -181,14 +181,15 @@ func (r *repository) createTables() {
 		filepaths JSON,
 		bytes_completed BIGINT,
 		bytes_missing BIGINT
-	    CONSTRAINT require_source CHECK (
+		CONSTRAINT require_source CHECK (
 			(case when source is null or length(source) = 0 then FALSE else TRUE end)
-	    )
+		)
 	)`,
 		`CREATE TABLE IF NOT EXISTS episodes(
 		id SERIAL PRIMARY KEY,
 		torrent_id INT NOT NULL,
 		name TEXT NOT NULL,
+		media_url TEXT,
 		filepaths JSON
 	)`}
 	for _, query := range tableCreationQueries {
@@ -245,10 +246,11 @@ func (dt *dbTorrent) toEntity() Torrent {
 }
 
 type dbEpisode struct {
-	ID        int    `db:"id"`
-	TorrentID int    `db:"torrent_id"`
-	Name      string `db:"name"`
-	FilePaths string `db:"filepaths"`
+	ID        int            `db:"id"`
+	TorrentID int            `db:"torrent_id"`
+	Name      string         `db:"name"`
+	FilePaths string         `db:"filepaths"`
+	MediaURL  sql.NullString `db:"media_url"`
 }
 
 func dbEpisodeFromEpisode(episode *Episode, torrentID int) *dbEpisode {
@@ -256,6 +258,10 @@ func dbEpisodeFromEpisode(episode *Episode, torrentID int) *dbEpisode {
 		TorrentID: torrentID,
 		Name:      episode.Name,
 		FilePaths: marshalFilepaths(episode.FilePaths),
+		MediaURL: sql.NullString{
+			String: episode.MediaURL,
+			Valid:  true,
+		},
 	}
 }
 
@@ -264,6 +270,7 @@ func (d *dbEpisode) toEntity() Episode {
 		ID:        d.ID,
 		Name:      d.Name,
 		FilePaths: unmarshalFilepaths(d.FilePaths),
+		MediaURL:  d.MediaURL.String,
 	}
 }
 
