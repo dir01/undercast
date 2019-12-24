@@ -7,18 +7,23 @@ import (
 	"net/http"
 	"os"
 	"testing"
-	"undercast/server"
+	. "undercast/server"
 )
 
-type Torrent = server.Torrent
-type Episode = server.Episode
-
-var a *server.App
+var a *App
+var dbURL string
 
 func TestMain(m *testing.M) {
-	a = &server.App{}
+
+	dbInfo, err := startPostgresContainer()
+	defer dbInfo.terminate()
+	if err != nil {
+		panic(err)
+	}
+	dbURL = dbInfo.url
+	a = &App{}
 	setupTorrentMock(a)
-	a.Initialize(os.Getenv("DB_URL"), "")
+	a.Initialize(dbURL, "")
 
 	code := m.Run()
 
@@ -31,9 +36,9 @@ func TestTorrentDownload(t *testing.T) {
 	id2 := insertTorrent("source 2", "DOWNLOADING")
 	id3 := insertTorrent("source 3", "ENCODING")
 
-	app := &server.App{}
+	app := &App{}
 	tm := setupTorrentMock(app)
-	app.Initialize(os.Getenv("DB_URL"), "")
+	app.Initialize(dbURL, "")
 
 	t.Run("it resumes on boot", func(t *testing.T) {
 		tm.assertTorrentAdded(t, id1, "source 1")
@@ -46,7 +51,7 @@ func TestTorrentDownload(t *testing.T) {
 		torrent := &Torrent{Source: "foo", State: "DOWNLOADING"}
 		app.Repository.SaveTorrent(torrent)
 
-		tm.callback(torrent.ID, server.TorrentState{
+		tm.callback(torrent.ID, TorrentState{
 			Name:           "Around the world in 80 days",
 			FilePaths:      []string{"Chapter 1/all.mp3", "Chapter 2/all.mp3"},
 			BytesCompleted: 300,
@@ -80,7 +85,7 @@ func TestTorrentDownload(t *testing.T) {
 			},
 		}, reloaded)
 
-		tm.callback(torrent.ID, server.TorrentState{
+		tm.callback(torrent.ID, TorrentState{
 			Name:           "Around the world in 80 days",
 			FilePaths:      []string{"Chapter 1/all.mp3", "Chapter 2/all.mp3"},
 			BytesCompleted: 1300,
@@ -118,7 +123,7 @@ func TestTorrentDownload(t *testing.T) {
 	t.Run("when torrent client finishes download, torrent state is DOWNLOAD_COMPLETE", func(t *testing.T) {
 		torrent := &Torrent{Source: "foo", State: "DOWNLOADING"}
 		app.Repository.SaveTorrent(torrent)
-		tm.callback(torrent.ID, server.TorrentState{
+		tm.callback(torrent.ID, TorrentState{
 			Name:           "Around the world in 80 days",
 			BytesCompleted: 9300,
 			BytesMissing:   0,
@@ -215,7 +220,7 @@ func TestDeleteTorrent(t *testing.T) {
 }
 
 func insertTorrent(source, state string) int {
-	db := getDB(os.Getenv("DB_URL"))
+	db := getDB(dbURL)
 	var id int
 	err := db.QueryRow("INSERT INTO torrents (source, state) VALUES ($1, $2) RETURNING id", source, state).Scan(&id)
 	if err != nil {

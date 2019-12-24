@@ -1,6 +1,5 @@
 .PHONY: test
 test:
-	DB_URL=postgres://undercast:undercast@localhost/undercast \
 	go test -v ./...
 
 runserver:

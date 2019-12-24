@@ -199,7 +199,6 @@ func (a *App) dispatchWebsocketMessage(message interface{}) {
 }
 
 func (a *App) initializeDatabase(dbURL string) {
-	dbURL = dbURL + "?sslmode=disable"
 	log.Println("Initializing DB: ", dbURL)
 	var err error
 	a.DB, err = sql.Open("postgres", dbURL)

@@ -3,7 +3,6 @@ package main
 import "database/sql"
 
 func getDB(dbURL string) *sql.DB {
-	dbURL = dbURL + "?sslmode=disable"
 	if db, err := sql.Open("postgres", dbURL); err != nil {
 		panic(err)
 	} else {

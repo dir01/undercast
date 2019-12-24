@@ -10,4 +10,5 @@ require (
 	github.com/gorilla/websocket v1.4.1
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/lib/pq v1.2.0
+	github.com/testcontainers/testcontainers-go v0.0.10
 )
