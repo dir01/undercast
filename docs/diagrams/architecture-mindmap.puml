@@ -1,0 +1,37 @@
+@startmindmap
+* overcast
+
+** downloads
+
+
+*** torrent
+****_ magnet
+****_ torrent file
+****_ allows partial downloads
+****_ magnet expands to torrent file
+****_ start fetching all torrent right away
+*****_ <i>size limt?
+
+
+*** youtube
+****_ different resolutions
+****_ direct audio download?
+****_ fetches all metadata right away
+****_ download some default option right away
+
+*** must start asap
+
+
+** transformations
+***_ different episodes from one download
+***_ join all files to one episode
+***_ post each file as separate episodes
+***_ post some files as separate episodes
+***_ extract audio from video and post as episode
+***_ change video res and post as episode
+
+** publishing
+***_ default feed
+***_ separate per-topic feeds
+***_ postpone publishing
+@endmindmap

@@ -3,10 +3,12 @@ test:
 	go test -v ./...
 
 runserver:
-	DB_URL=postgres://undercast:undercast@localhost/undercast \
-	DATA_DIR=./data \
+	MONGO_URI=mongodb://localhost/ \
+	MONGO_DB_NAME=test \
 	UI_DEV_SERVER_URL=$(UI_DEV_SERVER_URL) \
 	go run ./cmd/server
+
+
 
 runserver-dev: UI_DEV_SERVER_URL=http://localhost:4200
 runserver-dev: runserver

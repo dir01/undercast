@@ -1,14 +1,5 @@
 version: "2.3"
 services:
-  postgres:
-    image: postgres
-    environment:
-      POSTGRES_USER: "undercast"
-      POSTGRES_PASSWORD: "undercast"
-      POSTGRES_DB: "undercast"
-    ports:
-      - "5432:5432"
-    restart: always
   app:
     build:
       context: .
@@ -21,4 +12,9 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - postgres
+      - mongo
+
+  mongo:
+    image: mongo
+    ports:
+    - "27017:27017"

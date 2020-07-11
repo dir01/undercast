@@ -1,230 +1,51 @@
-package main
+package server_test
 
 import (
-	"bytes"
-	"fmt"
-	"log"
-	"net/http"
-	"os"
+	"context"
+	"github.com/stretchr/testify/suite"
+	"github.com/testcontainers/testcontainers-go"
+	"go.mongodb.org/mongo-driver/mongo"
 	"testing"
-	. "undercast/server"
+	"undercast"
 )
 
-var a *App
-var dbURL string
+func TestServer(t *testing.T) {
+	s := &ServerSuite{}
 
-func TestMain(m *testing.M) {
-
-	dbInfo, err := startPostgresContainer()
-	defer dbInfo.terminate()
-	if err != nil {
-		panic(err)
+	if mongoURI, err := s.getMongoURI(); err == nil {
+		s.mongoURI = mongoURI
+	} else {
+		t.Error(err)
 	}
-	dbURL = dbInfo.url
-	a = &App{}
-	setupTorrentMock(a)
-	a.Initialize(dbURL, "")
 
-	code := m.Run()
+	dbName := "test"
 
-	dropTables()
-	os.Exit(code)
-}
-
-func TestTorrentDownload(t *testing.T) {
-	id1 := insertTorrent("source 1", "DOWNLOADING")
-	id2 := insertTorrent("source 2", "DOWNLOADING")
-	id3 := insertTorrent("source 3", "ENCODING")
-
-	app := &App{}
-	tm := setupTorrentMock(app)
-	app.Initialize(dbURL, "")
-
-	t.Run("it resumes on boot", func(t *testing.T) {
-		tm.assertTorrentAdded(t, id1, "source 1")
-		tm.assertTorrentAdded(t, id2, "source 2")
-		tm.assertTorrentNotAdded(t, id3, "source 3")
-	})
-
-	t.Run("on each torrent client update torrent is updated in db", func(t *testing.T) {
-		clearTables()
-		torrent := &Torrent{Source: "foo", State: "DOWNLOADING"}
-		app.Repository.SaveTorrent(torrent)
-
-		tm.callback(torrent.ID, TorrentState{
-			Name:           "Around the world in 80 days",
-			FilePaths:      []string{"Chapter 1/all.mp3", "Chapter 2/all.mp3"},
-			BytesCompleted: 300,
-			BytesMissing:   9000,
-			Done:           false,
-		})
-
-		reloaded, err := app.Repository.GetTorrent(torrent.ID)
-		if err != nil {
-			t.Error(err)
-		}
-		assertDeepEquals(t, &Torrent{
-			ID:             torrent.ID,
-			State:          "DOWNLOADING",
-			Source:         "foo",
-			Name:           "Around the world in 80 days",
-			FilePaths:      []string{"Chapter 1/all.mp3", "Chapter 2/all.mp3"},
-			BytesCompleted: 300,
-			BytesMissing:   9000,
-			Episodes: []Episode{
-				Episode{
-					ID:        1,
-					Name:      "Chapter 1",
-					FilePaths: []string{"Chapter 1/all.mp3"},
-				},
-				Episode{
-					ID:        2,
-					Name:      "Chapter 2",
-					FilePaths: []string{"Chapter 2/all.mp3"},
-				},
-			},
-		}, reloaded)
-
-		tm.callback(torrent.ID, TorrentState{
-			Name:           "Around the world in 80 days",
-			FilePaths:      []string{"Chapter 1/all.mp3", "Chapter 2/all.mp3"},
-			BytesCompleted: 1300,
-			BytesMissing:   8000,
-			Done:           false,
-		})
-
-		reloaded, err = app.Repository.GetTorrent(torrent.ID)
-		if err != nil {
-			t.Error(err)
-		}
-		assertDeepEquals(t, &Torrent{
-			ID:             torrent.ID,
-			State:          "DOWNLOADING",
-			Source:         "foo",
-			Name:           "Around the world in 80 days",
-			FilePaths:      []string{"Chapter 1/all.mp3", "Chapter 2/all.mp3"},
-			BytesCompleted: 1300,
-			BytesMissing:   8000,
-			Episodes: []Episode{
-				Episode{
-					ID:        1,
-					Name:      "Chapter 1",
-					FilePaths: []string{"Chapter 1/all.mp3"},
-				},
-				Episode{
-					ID:        2,
-					Name:      "Chapter 2",
-					FilePaths: []string{"Chapter 2/all.mp3"},
-				},
-			},
-		}, reloaded)
-	})
-
-	t.Run("when torrent client finishes download, torrent state is DOWNLOAD_COMPLETE", func(t *testing.T) {
-		torrent := &Torrent{Source: "foo", State: "DOWNLOADING"}
-		app.Repository.SaveTorrent(torrent)
-		tm.callback(torrent.ID, TorrentState{
-			Name:           "Around the world in 80 days",
-			BytesCompleted: 9300,
-			BytesMissing:   0,
-			Done:           true,
-		})
-
-		reloaded, err := app.Repository.GetTorrent(torrent.ID)
-		if err != nil {
-			t.Error(err)
-		}
-		assertDeepEquals(t, &Torrent{
-			ID:             torrent.ID,
-			State:          "ENCODING",
-			Source:         "foo",
-			Name:           "Around the world in 80 days",
-			BytesCompleted: 9300,
-			BytesMissing:   0,
-		}, reloaded)
-	})
-
-}
-
-func TestCreateTorrent(t *testing.T) {
-	t.Run("from source field", func(t *testing.T) {
-		clearTables()
-		tor := setupTorrentMock(a)
-
-		payload := []byte(`{ "source": "magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c" }`)
-		response := getResponse("POST", "/api/torrents", bytes.NewBuffer(payload))
-
-		checkResponse(t, response, http.StatusCreated,
-			`{"id":1,"state":"DOWNLOADING","name":"","source":"magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c","filepaths":null,"bytesCompleted":0,"bytesMissing":0,"episodes":null}`,
-		)
-		tor.assertTorrentAdded(t, 1, "magnet:?xt=urn:btih:1ce53bc6bd5d16b4f92f9cd40bc35e10724f355c")
-	})
-
-	t.Run("fails to create torrent without source", func(t *testing.T) {
-		payload := []byte(`{}`)
-		response := getResponse("POST", "/api/torrents", bytes.NewBuffer(payload))
-		checkResponse(
-			t, response, http.StatusInternalServerError,
-			`{"error":"pq: new row for relation \"torrents\" violates check constraint \"require_source\""}`,
-		)
-	})
-}
-
-func TestListTorrents(t *testing.T) {
-	t.Run("paginated queries", func(t *testing.T) {
-		clearTables()
-
-		a.Repository.SaveTorrent(&Torrent{Source: "a"})
-		a.Repository.SaveTorrent(&Torrent{Source: "b"})
-		a.Repository.SaveTorrent(&Torrent{Source: "c"})
-
-		response := getResponse("GET", "/api/torrents", nil)
-		checkResponse(t, response, http.StatusOK, []Torrent{
-			Torrent{ID: 1, Source: "a"},
-			Torrent{ID: 2, Source: "b"},
-			Torrent{ID: 3, Source: "c"},
-		})
-	})
-
-	t.Run("empty table results in empty array", func(t *testing.T) {
-		clearTables()
-
-		response := getResponse("GET", "/api/torrents", nil)
-
-		checkResponse(t, response, http.StatusOK, nil)
-	})
-}
-
-func TestDeleteTorrent(t *testing.T) {
-	t.Run("successful deletion", func(t *testing.T) {
-		clearTables()
-		torrent := &Torrent{Source: "something"}
-		a.Repository.SaveTorrent(torrent)
-
-		response := getResponse("DELETE", fmt.Sprintf("/api/torrents/%d", torrent.ID), nil)
-		checkResponse(t, response, http.StatusOK, `{"result":"success"}`)
-
-		response = getResponse("GET", "/api/torrents", nil)
-		checkResponse(t, response, http.StatusOK, `[]`)
-	})
-
-	t.Run("fails if no torrent", func(t *testing.T) {
-		response := getResponse("DELETE", "/api/torrents/100", nil)
-		checkResponse(t, response, http.StatusNotFound, `{"error":"Not found"}`)
-	})
-
-	t.Run("fails if wrong id", func(t *testing.T) {
-		response := getResponse("DELETE", "/api/torrents/99999999999999999999999999999", nil)
-		checkResponse(t, response, http.StatusBadRequest, `{"error":"Invalid torrent id"}`)
-	})
-}
-
-func insertTorrent(source, state string) int {
-	db := getDB(dbURL)
-	var id int
-	err := db.QueryRow("INSERT INTO torrents (source, state) VALUES ($1, $2) RETURNING id", source, state).Scan(&id)
-	if err != nil {
-		log.Fatal(err)
+	if server, err := undercast.Bootstrap(undercast.Options{MongoURI: s.mongoURI, MongoDbName: dbName}); err == nil {
+		s.server = server
+	} else {
+		t.Error(err)
 	}
-	return id
+
+	if db, err := s.getDatabase(dbName); err == nil {
+		s.db = db
+	} else {
+		t.Error(err)
+	}
+
+	suite.Run(t, s)
+}
+
+type ServerSuite struct {
+	suite.Suite
+	mongoURI   string
+	server     *undercast.Server
+	db         *mongo.Database
+	containers []testcontainers.Container
+}
+
+func (s *ServerSuite) TearDownSuite() {
+	ctx := context.Background()
+	for _, c := range s.containers {
+		_ = c.Terminate(ctx)
+	}
 }

@@ -1,20 +1,20 @@
 package main
 
 import (
+	"log"
 	"os"
-	"undercast/bittorrent"
-	"undercast/server"
+	"undercast"
 )
 
 func main() {
-	t, err := bittorrent.NewClient(os.Getenv("DATA_DIR"))
+	server, err := undercast.Bootstrap(undercast.Options{
+		MongoURI:    os.Getenv("MONGO_URI"),
+		MongoDbName: os.Getenv("MONGO_DB_NAME"),
+	})
 	if err != nil {
-		panic("Failed to initialize bittorrent client:\n" + err.Error())
+		log.Fatal(err)
 	}
-	a := server.App{Torrent: t}
-	a.Initialize(
-		os.Getenv("DB_URL"),
-		os.Getenv("UI_DEV_SERVER_URL"),
-	)
-	a.Run(":8080")
+	addr := ":8080"
+	log.Println("Serving at address " + addr)
+	log.Fatal(server.ListenAndServe(addr))
 }
