@@ -1,0 +1,28 @@
+name: Frontend tests and lints on each Pull Request
+
+on:
+  pull_request:
+
+jobs:
+  test:
+    name: Run frontend linters
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./ui
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2-beta
+        with:
+          node-version: '13'
+      - run: npm i
+      - run: npm run lint
+
+#      Frontend test are broken at the moment
+
+#      - run: npm run test:coverage
+#      - name: Coveralls
+#        uses: coverallsapp/github-action@v1.0.1
+#        with:
+#          github-token: ${{ secrets.github_token }}
+#          path-to-lcov: coverage.lcov
