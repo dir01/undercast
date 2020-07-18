@@ -7,10 +7,11 @@ services:
     volumes:
       - ./data:/app/data
     environment:
-      DB_URL: postgres://undercast:undercast@postgres/undercast
+      MONGO_URI: mongodb://mongo
+      MONGO_DB_NAME: undercast
       DATA_DIR: /data
     ports:
-      - "8080:8080"
+      - "4242:4242"
     depends_on:
       - mongo
 

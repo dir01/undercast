@@ -13,7 +13,6 @@ RUN go mod download
 # Then copy everything else (but not ui, 
 # so that changes in ui do not cause rebuild)
 COPY --from=server_source /app .
-RUN ls -la 
 RUN go build -o /app/bin/server /app/cmd/server/main.go
 
 
@@ -31,7 +30,7 @@ RUN npm run build
 
 FROM alpine as prod
 RUN mkdir -p /app/ui /app/bin; apk add libstdc++
-COPY --from=build_ui /app/ui/dist/ /app/ui/dist/
+COPY --from=build_ui /app/ui/build/ /app/ui/build/
 COPY --from=build_server /app/bin/server /app/bin/server
 WORKDIR /app
 CMD ./bin/server

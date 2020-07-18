@@ -1,6 +1,6 @@
 .git
 ./ui/node_modules
-./ui/dist
+./ui/build
 ./data
 ./bin
 ./test
