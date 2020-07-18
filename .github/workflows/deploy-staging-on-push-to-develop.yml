@@ -1,0 +1,38 @@
+name: Deploy staging environment
+on:
+  push:
+    branches:
+      - develop
+jobs:
+  publish_docker_image:
+    name: Build docker image, then push it to Dockerhub
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v2
+      - name: Publish to Registry
+        uses: elgohr/Publish-Docker-Github-Action@master
+        with:
+          name: dir01/undercast
+          username: dir01
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          tags: staging
+          cache: ${{ github.event_name != 'schedule' }}
+  deploy:
+    name: Deploy staging environment
+    needs: publish_docker_image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v2
+      - uses: wshihadeh/docker-deployment-action@v1
+        with:
+          args: up -d
+          remote_docker_host: ${{ secrets.DOCKER_HOST }}
+          ssh_private_key: ${{ secrets.DOCKER_SSH_PRIVATE_KEY }}
+          ssh_public_key: ${{ secrets.DOCKER_SSH_PUBLIC_KEY }}
+          copy_stack_file: true
+          deploy_path: /opt/undercast
+          stack_file_name: docker-compose.staging.yml
+          docker_prune: true
+          pull_images_first: true

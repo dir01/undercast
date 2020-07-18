@@ -1,0 +1,16 @@
+version: "2.3"
+services:
+  app:
+    image: dir01/undercast:staging
+    volumes:
+      - ./data:/app/data
+    environment:
+      MONGO_URI: mongodb://mongo
+      MONGO_DB_NAME: undercast
+      DATA_DIR: /data
+    ports:
+      - "80:4242"
+    depends_on:
+      - mongo
+  mongo:
+    image: mongo
