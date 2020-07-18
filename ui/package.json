@@ -10,7 +10,8 @@
     "lint": "eslint 'src/**/*.{js,jsx,ts,tsx}'",
     "test": "jest ./tests",
     "clean": "rimraf ./dist/*",
-    "analyze": "npm run clean && npm run build -- --json && npx webpack-bundle-analyzer stats.json build"
+    "analyze": "npm run clean && npm run build -- --json && npx webpack-bundle-analyzer stats.json build",
+    "lint:fix": "npm run lint -- --fix"
   },
   "husky": {
     "hooks": {
@@ -26,17 +27,17 @@
   ],
   "dependencies": {
     "milligram": "^1.4.1",
-    "preact": "^10.3.1",
+    "preact": "^10.4.6",
     "preact-jsx-chai": "^3.0.0",
     "preact-markup": "^2.0.0",
-    "preact-render-to-string": "^5.1.4",
+    "preact-render-to-string": "^5.1.10",
     "preact-router": "^3.2.1",
     "uuid": "^8.2.0"
   },
   "devDependencies": {
     "@teamsupercell/typings-for-css-modules-loader": "^2.2.0",
     "@types/enzyme": "^3.10.5",
-    "@types/jest": "^25.1.2",
+    "@types/jest": "^26.0.4",
     "@types/uuid": "^8.0.0",
     "@types/webpack-env": "^1.15.1",
     "@typescript-eslint/eslint-plugin": "^2.25.0",
@@ -50,13 +51,13 @@
     "eslint-plugin-react": "^7.19.0",
     "eslint-plugin-react-hooks": "^3.0.0",
     "husky": "^4.2.1",
-    "jest": "^25.1.0",
-    "jest-preset-preact": "^1.0.0",
+    "jest": "^26.1.0",
+    "jest-preset-preact": "^4.0.0",
     "lint-staged": "^10.0.7",
     "preact-cli": "^3.0.0-rc.16",
     "prettier": "^1.19.1",
     "sirv-cli": "^1.0.0-next.3",
-    "typescript": "^3.7.5",
+    "typescript": "^3.9.7",
     "webpack-bundle-analyzer": "^3.8.0"
   }
 }
