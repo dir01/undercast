@@ -8,13 +8,14 @@ import (
 
 func main() {
 	server, err := undercast.Bootstrap(undercast.Options{
-		MongoURI:    os.Getenv("MONGO_URI"),
-		MongoDbName: os.Getenv("MONGO_DB_NAME"),
+		MongoURI:       os.Getenv("MONGO_URI"),
+		MongoDbName:    os.Getenv("MONGO_DB_NAME"),
+		UIDevServerURL: os.Getenv("UI_DEV_SERVER_URL"),
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	addr := ":8080"
+	addr := ":4242"
 	log.Println("Serving at address " + addr)
 	log.Fatal(server.ListenAndServe(addr))
 }

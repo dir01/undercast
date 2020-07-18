@@ -5,11 +5,14 @@ import (
 	"github.com/gorilla/mux"
 	"io"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 )
 
 type Options struct {
-	MongoURI    string
-	MongoDbName string
+	MongoURI       string
+	MongoDbName    string
+	UIDevServerURL string
 }
 
 func Bootstrap(options Options) (*Server, error) {
@@ -18,12 +21,13 @@ func Bootstrap(options Options) (*Server, error) {
 		return nil, err
 	}
 	downloadsService := &downloadsService{repository: &downloadsRepository{db}}
-	server := &Server{downloadsService: downloadsService}
+	server := &Server{downloadsService: downloadsService, uiDevServerURL: options.UIDevServerURL}
 	return server, nil
 }
 
 type Server struct {
 	downloadsService *downloadsService
+	uiDevServerURL   string
 	router           *mux.Router
 }
 
@@ -40,6 +44,7 @@ func (s *Server) ListenAndServe(addr string) error {
 func (s *Server) initRoutes() {
 	s.router = mux.NewRouter()
 	s.router.HandleFunc("/api/downloads", s.createDownload()).Methods("POST")
+	s.router.PathPrefix("/").Handler(s.getUIHandler())
 }
 
 func (s *Server) createDownload() http.HandlerFunc {
@@ -51,6 +56,19 @@ func (s *Server) createDownload() http.HandlerFunc {
 		}
 		download, err := s.downloadsService.Add(r.Context(), req.Source)
 		s.respond(w, download, err)
+	}
+}
+
+func (s *Server) getUIHandler() http.Handler {
+	if s.uiDevServerURL == "" {
+		return http.FileServer(http.Dir("./ui/build/"))
+	}
+
+	if parsed, err := url.ParseRequestURI(s.uiDevServerURL); err != nil {
+		panic("Failed to parse provided uiDevServerURL " + s.uiDevServerURL)
+	} else {
+		proxy := httputil.NewSingleHostReverseProxy(parsed)
+		return proxy
 	}
 }
 
@@ -67,8 +85,10 @@ func (s *Server) respond(w http.ResponseWriter, data interface{}, err error) {
 	w.Header().Set("Content-Type", "application/json")
 	var resp response
 	if err != nil {
+		resp.Status = "error"
 		resp.Error = err.Error()
 	} else {
+		resp.Status = "success"
 		resp.Payload = data
 	}
 	if bytes, err := json.Marshal(resp); err != nil {
@@ -82,4 +102,5 @@ func (s *Server) respond(w http.ResponseWriter, data interface{}, err error) {
 type response struct {
 	Error   string      `json:"error"`
 	Payload interface{} `json:"payload"`
+	Status  string      `json:"status"`
 }
