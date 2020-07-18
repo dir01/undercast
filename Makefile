@@ -2,6 +2,9 @@
 test:
 	go test -v ./...
 
+test-cover:
+	go test -coverpkg ./... -v -coverprofile=coverage.out -covermode=count ./...
+
 runserver:
 	MONGO_URI=mongodb://localhost/ \
 	MONGO_DB_NAME=test \
@@ -10,7 +13,7 @@ runserver:
 
 
 
-runserver-dev: UI_DEV_SERVER_URL=http://localhost:8080
+runserver-dev: UI_DEV_SERVER_URL="http://localhost:8080"
 runserver-dev: runserver
 
 build-ui:

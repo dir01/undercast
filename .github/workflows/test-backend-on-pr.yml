@@ -1,0 +1,25 @@
+name: Backend tests on each Pull Request
+on:
+  pull_request:
+
+jobs:
+  test:
+    name: Run backend tests, collect coverage report
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '^1.13.5'
+      - name: Run tests with coverage report
+        run: make test-cover
+      - name: Convert coverage to lcov
+        uses: jandelgado/gcov2lcov-action@v1.0.0
+        with:
+          infile: coverage.out
+          outfile: coverage.lcov
+      - name: Coveralls
+        uses: coverallsapp/github-action@v1.0.1
+        with:
+          github-token: ${{ secrets.github_token }}
+          path-to-lcov: coverage.lcov
