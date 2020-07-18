@@ -1,11 +1,10 @@
-import "milligram/dist/milligram.css"
+import "milligram/dist/milligram.css";
 
 import { FunctionalComponent, h } from "preact";
-import { Route, Router, RouterOnChangeArgs } from "preact-router";
+import { Route, Router } from "preact-router";
 
 import Home from "../routes/home";
-import Profile from "../routes/profile";
-import NotFoundPage from '../routes/notfound';
+import NotFoundPage from "../routes/notfound";
 import Header from "./header";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -15,20 +14,11 @@ if ((module as any).hot) {
 }
 
 const App: FunctionalComponent = () => {
-    let currentUrl: string;
-    const handleRoute = (e: RouterOnChangeArgs) => {
-        currentUrl = e.url;
-    };
-
     return (
         <div id="app">
             <Header />
-            <Router onChange={handleRoute}>
+            <Router>
                 <Route path="/" component={Home} />
-                {
-                    //<Route path="/profile/" component={Profile} user="me" />
-                    //<Route path="/profile/:user" component={Profile} />
-                }
                 <NotFoundPage default />
             </Router>
         </div>
