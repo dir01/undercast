@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { FunctionalComponent, h } from "preact";
-import { useState, useCallback } from "preact/hooks";
+import { useState, useCallback, useContext } from "preact/hooks";
 import API, { Download } from "../../API";
-
-const api = new API("");
+import ApiContext from "../../contexts/ApiContext";
 
 const DownloadForm: FunctionalComponent = () => {
+    const api = useContext(ApiContext) as API;
+
     const [source, setSource] = useState("");
 
     const onInputSource = useCallback((event: any) => {
@@ -20,7 +21,7 @@ const DownloadForm: FunctionalComponent = () => {
             event.preventDefault();
             return false;
         },
-        [source]
+        [source, api]
     );
 
     return (
@@ -28,12 +29,7 @@ const DownloadForm: FunctionalComponent = () => {
             <fieldset>
                 <label htmlFor="source">Source</label>
                 <input type="text" onInput={onInputSource} value={source} />
-                <input
-                    class="button"
-                    type="submit"
-                    value="Send"
-                    disabled={!source}
-                />
+                <input type="submit" value="Send" disabled={!source} />
             </fieldset>
         </form>
     );

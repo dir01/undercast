@@ -11,6 +11,8 @@ func main() {
 		MongoURI:       os.Getenv("MONGO_URI"),
 		MongoDbName:    os.Getenv("MONGO_DB_NAME"),
 		UIDevServerURL: os.Getenv("UI_DEV_SERVER_URL"),
+		SessionSecret:  os.Getenv("SESSION_SECRET"),
+		GlobalPassword: os.Getenv("GLOBAL_PASSWORD"),
 	})
 	if err != nil {
 		log.Fatal(err)

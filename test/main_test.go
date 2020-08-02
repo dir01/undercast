@@ -10,7 +10,9 @@ import (
 )
 
 func TestServer(t *testing.T) {
-	s := &ServerSuite{}
+	s := &ServerSuite{
+		globalPassword: "qwerty",
+	}
 
 	if mongoURI, err := s.getMongoURI(); err == nil {
 		s.mongoURI = mongoURI
@@ -20,7 +22,12 @@ func TestServer(t *testing.T) {
 
 	dbName := "test"
 
-	if server, err := undercast.Bootstrap(undercast.Options{MongoURI: s.mongoURI, MongoDbName: dbName}); err == nil {
+	if server, err := undercast.Bootstrap(undercast.Options{
+		MongoURI:       s.mongoURI,
+		MongoDbName:    dbName,
+		SessionSecret:  "some-secret",
+		GlobalPassword: s.globalPassword,
+	}); err == nil {
 		s.server = server
 	} else {
 		t.Error(err)
@@ -37,10 +44,12 @@ func TestServer(t *testing.T) {
 
 type ServerSuite struct {
 	suite.Suite
-	mongoURI   string
-	server     *undercast.Server
-	db         *mongo.Database
-	containers []testcontainers.Container
+	mongoURI       string
+	server         *undercast.Server
+	db             *mongo.Database
+	containers     []testcontainers.Container
+	globalPassword string
+	tempCookies    []string
 }
 
 func (s *ServerSuite) TearDownSuite() {
@@ -48,4 +57,8 @@ func (s *ServerSuite) TearDownSuite() {
 	for _, c := range s.containers {
 		_ = c.Terminate(ctx)
 	}
+}
+
+func (s *ServerSuite) SetupTest() {
+	s.tempCookies = []string{}
 }

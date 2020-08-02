@@ -2,7 +2,8 @@
 /* eslint-disable @typescript-eslint/interface-name-prefix */
 declare namespace StyleCssNamespace {
     export interface IStyleCss {
-        header: string;
+        spinner: string;
+        spinnerContainer: string;
     }
 }
 

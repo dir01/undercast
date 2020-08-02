@@ -1,0 +1,16 @@
+.loginPromptContainer {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 10%;
+}
+
+.loginPromptContainer fieldset {
+    display: flex;
+}
+
+.loginPromptContainer input {
+    margin-left: auto;
+    margin-right: auto;
+}

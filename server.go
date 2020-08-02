@@ -1,8 +1,11 @@
 package undercast
 
 import (
+	"encoding/gob"
 	"encoding/json"
+	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 	"io"
 	"net/http"
 	"net/http/httputil"
@@ -13,6 +16,8 @@ type Options struct {
 	MongoURI       string
 	MongoDbName    string
 	UIDevServerURL string
+	SessionSecret  string
+	GlobalPassword string
 }
 
 func Bootstrap(options Options) (*Server, error) {
@@ -20,8 +25,18 @@ func Bootstrap(options Options) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	downloadsService := &downloadsService{repository: &downloadsRepository{db}}
-	server := &Server{downloadsService: downloadsService, uiDevServerURL: options.UIDevServerURL}
+
+	store := sessions.NewCookieStore([]byte(options.SessionSecret))
+	gob.Register(map[string]interface{}{})
+
+	server := &Server{
+		downloadsService: downloadsService,
+		uiDevServerURL:   options.UIDevServerURL,
+		sessionStore:     store,
+		globalPassword:   options.GlobalPassword,
+	}
 	return server, nil
 }
 
@@ -29,6 +44,8 @@ type Server struct {
 	downloadsService *downloadsService
 	uiDevServerURL   string
 	router           *mux.Router
+	sessionStore     sessions.Store
+	globalPassword   string
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -44,6 +61,9 @@ func (s *Server) ListenAndServe(addr string) error {
 func (s *Server) initRoutes() {
 	s.router = mux.NewRouter()
 	s.router.HandleFunc("/api/downloads", s.createDownload()).Methods("POST")
+	s.router.HandleFunc("/api/auth/login", s.login()).Methods("POST")
+	s.router.HandleFunc("/api/auth/logout", s.logout()).Methods("POST")
+	s.router.HandleFunc("/api/auth/profile", s.getProfile()).Methods("GET")
 	s.router.PathPrefix("/").Handler(s.getUIHandler())
 }
 
@@ -56,6 +76,45 @@ func (s *Server) createDownload() http.HandlerFunc {
 		}
 		download, err := s.downloadsService.Add(r.Context(), req.Source)
 		s.respond(w, download, err)
+	}
+}
+
+func (s *Server) login() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		req := &loginRequest{}
+		if err := s.decodeRequest(req, r.Body); err != nil {
+			s.respond(w, nil, err)
+			return
+		}
+		if req.Password != s.globalPassword {
+			s.respond(w, "", fmt.Errorf("wrong_password"))
+			return
+		}
+		session, _ := s.sessionStore.Get(r, "auth-session")
+		session.Values["profile"] = map[string]interface{}{"isActive": true}
+		session.Save(r, w)
+		s.respond(w, "OK", nil)
+	}
+}
+
+func (s *Server) logout() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		session, _ := s.sessionStore.Get(r, "auth-session")
+		session.Values = map[interface{}]interface{}{}
+		session.Save(r, w)
+		s.respond(w, "OK", nil)
+	}
+}
+
+func (s *Server) getProfile() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		session, _ := s.sessionStore.Get(r, "auth-session")
+		profile, ok := session.Values["profile"]
+		if !ok {
+			s.respond(w, profile, fmt.Errorf("no_profile"))
+			return
+		}
+		s.respond(w, profile, nil)
 	}
 }
 

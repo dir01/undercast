@@ -8,7 +8,7 @@
     "serve": "sirv build --port 8080 --cors --single",
     "dev": "preact watch",
     "lint": "eslint 'src/**/*.{js,jsx,ts,tsx}'",
-    "test": "jest ./tests",
+    "test": "jest ./tests --passWithNoTests",
     "clean": "rimraf ./dist/*",
     "analyze": "npm run clean && npm run build -- --json && npx webpack-bundle-analyzer stats.json build",
     "lint:fix": "npm run lint -- --fix"
@@ -28,13 +28,13 @@
   "dependencies": {
     "milligram": "^1.4.1",
     "preact": "^10.4.6",
-    "preact-jsx-chai": "^3.0.0",
-    "preact-markup": "^2.0.0",
-    "preact-render-to-string": "^5.1.10",
     "preact-router": "^3.2.1",
     "uuid": "^8.2.0"
   },
   "devDependencies": {
+    "preact-markup": "^2.0.0",
+    "preact-render-to-string": "^5.1.10",
+    "preact-jsx-chai": "^3.0.0",
     "@teamsupercell/typings-for-css-modules-loader": "^2.2.0",
     "@types/enzyme": "^3.10.5",
     "@types/jest": "^26.0.4",

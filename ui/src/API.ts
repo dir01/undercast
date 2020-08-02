@@ -8,6 +8,19 @@ export default class API {
         await this.request("post", "/api/downloads", download);
     }
 
+    public async getProfile(): Promise<Profile> {
+        const response = await this.request("get", "/api/auth/profile");
+        return response.payload;
+    }
+
+    public async login(password: string): Promise<void> {
+        await this.request("post", "/api/auth/login", { password });
+    }
+
+    public async logout(): Promise<void> {
+        await this.request("post", "/api/auth/logout");
+    }
+
     private async request(
         method: "get" | "post",
         path: string,
@@ -37,3 +50,5 @@ export class Download {
         this.source = source;
     }
 }
+
+export type Profile = { isActive: boolean };
