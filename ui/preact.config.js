@@ -35,7 +35,7 @@ export default {
         )[0];
 
         Object.assign(definePlugin.definitions, {
-            API_URL: `"${process.env.API_URL}"`
+            API_URL: `"${process.env.API_URL || ""}"`
         });
     }
 };

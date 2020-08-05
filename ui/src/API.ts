@@ -5,20 +5,20 @@ export default class API {
     constructor(private baseURL: string) {}
 
     public async saveDownload(download: Download): Promise<void> {
-        await this.request("post", "/api/downloads", download);
+        await this.request("post", "/downloads", download);
     }
 
     public async getProfile(): Promise<Profile> {
-        const response = await this.request("get", "/api/auth/profile");
+        const response = await this.request("get", "/auth/profile");
         return response.payload;
     }
 
     public async login(password: string): Promise<void> {
-        await this.request("post", "/api/auth/login", { password });
+        await this.request("post", "/auth/login", { password });
     }
 
     public async logout(): Promise<void> {
-        await this.request("post", "/api/auth/logout");
+        await this.request("post", "/auth/logout");
     }
 
     private async request(

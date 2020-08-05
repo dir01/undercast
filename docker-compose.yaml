@@ -4,12 +4,16 @@ services:
     build:
       context: .
       target: prod
+      args:
+        - api_url=http://localhost:4242/api
     volumes:
       - ./data:/app/data
     environment:
       MONGO_URI: mongodb://mongo
       MONGO_DB_NAME: undercast
       DATA_DIR: /data
+      SESSION_SECRET: dev-session-secret
+      GLOBAL_PASSWORD: dev-password
     ports:
       - "4242:4242"
     depends_on:

@@ -19,6 +19,12 @@ if ((module as any).hot) {
     require("preact/debug");
 }
 
+//@ts-expect-error Cannot find name API_URL
+const apiUrl = API_URL;
+if (!apiUrl) {
+    throw new Error("Please provide API_URL env var");
+}
+
 const App: FunctionalComponent = () => {
     const { profile, logout } = AuthContainer.useContainer();
     return (
@@ -35,7 +41,7 @@ const App: FunctionalComponent = () => {
 };
 
 const Wrapped: FunctionalComponent = () => {
-    const [api] = useState(new API("http://localhost:4242"));
+    const [api] = useState(new API(apiUrl));
     return (
         <ApiContext.Provider value={api}>
             <AuthContainer.Provider initialState={api}>
