@@ -1,6 +1,6 @@
 import { FunctionalComponent, h } from "preact";
 import * as style from "./style.css";
-import { Profile } from "../../API";
+import { Profile } from "../../api";
 
 type HeaderProps = { onLogout: () => Promise<void>; profile: Profile };
 

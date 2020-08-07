@@ -10,7 +10,12 @@ type AuthProps = {
 };
 
 const Auth: FunctionComponent<AuthProps> = ({ children }: AuthProps) => {
-    const { isLoggedIn, isLoading, login } = AuthContainer.useContainer();
+    const {
+        isLoggedIn,
+        isLoading,
+        login,
+        loginError
+    } = AuthContainer.useContainer();
 
     if (isLoading) {
         return (
@@ -24,7 +29,7 @@ const Auth: FunctionComponent<AuthProps> = ({ children }: AuthProps) => {
         return <Fragment>{children}</Fragment>;
     }
 
-    return <LoginForm onSubmit={login} />;
+    return <LoginForm onSubmit={login} error={loginError} />;
 };
 
 export default Auth;

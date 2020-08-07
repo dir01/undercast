@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { FunctionalComponent, h } from "preact";
 import { useState, useCallback, useContext } from "preact/hooks";
-import API, { Download } from "../../API";
+import API, { Download } from "../../api";
 import ApiContext from "../../contexts/ApiContext";
 
 const DownloadForm: FunctionalComponent = () => {

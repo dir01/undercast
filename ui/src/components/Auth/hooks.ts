@@ -1,4 +1,4 @@
-import API, { Profile } from "../../API";
+import API, { Profile } from "../../api";
 import { useState, useCallback, useEffect } from "preact/hooks";
 import { createContainer } from "../../unstated-next-preact";
 
@@ -10,45 +10,54 @@ const useAuth = (
     isLoading: boolean;
     login: (token: string) => Promise<void>;
     logout: () => Promise<void>;
+    loginError: string;
 } => {
     const [isLoggedIn, setLoggedIn] = useState(false);
     const [isLoading, setLoading] = useState(true);
     const [profile, setProfile] = useState<Profile | null>(null);
+    const [loginError, setLoginError] = useState("");
 
     useEffect(() => {
         (async (): Promise<void> => {
             if (!api) {
                 return;
             }
-            const profile = await api.getProfile();
-            setProfile(profile);
+            const profileResult = await api.getProfile();
             setLoading(false);
-            setLoggedIn(Boolean(profile));
+            if (profileResult.isOk()) {
+                const profile = profileResult.getValue();
+                setProfile(profile);
+                setLoggedIn(true);
+            } else {
+                setLoggedIn(false);
+            }
         })();
-    }, [api]);
+    }, [api, profile]);
 
     const login = useCallback(
         async (password: string) => {
             if (!api) {
                 return;
             }
-            await api.login(password);
-            setLoggedIn(true);
+            const result = await api.login(password);
+            if (result.isOk()) {
+                setLoggedIn(true);
+            } else {
+                setLoginError(result.getError());
+            }
         },
         [api]
     );
 
     const logout = useCallback(async () => {
-        console.log("HELLO");
         if (!api) {
-            console.log("NO API");
             return;
         }
         await api.logout();
         setLoggedIn(false);
     }, [api]);
 
-    return { profile, isLoggedIn, isLoading, login, logout };
+    return { profile, isLoggedIn, isLoading, login, logout, loginError };
 };
 
 export const AuthContainer = createContainer(useAuth);

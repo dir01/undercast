@@ -5,7 +5,7 @@ services:
       context: .
       target: prod
       args:
-        - api_url=http://localhost:4242/api
+        - api_url=${API_URL}
     volumes:
       - ./data:/app/data
     environment:

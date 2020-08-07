@@ -5,7 +5,7 @@ import { FunctionalComponent, h } from "preact";
 import { Route, Router } from "preact-router";
 import { useState } from "preact/hooks";
 
-import API, { Profile } from "../API";
+import API, { Profile } from "../api";
 import ApiContext from "../contexts/ApiContext";
 import Home from "../routes/home";
 import NotFoundPage from "../routes/notfound";
