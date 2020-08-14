@@ -1,0 +1,12 @@
+:root {
+    --russian-violet: hsla(294, 94%, 13%, 1);
+    --old-lace: hsla(47, 58%, 94%, 1);
+    --black-coral: hsla(218, 19%, 42%, 1);
+    --middle-red: hsla(12, 62%, 65%, 1);
+    --baby-blue: hsla(196, 99%, 69%, 1);
+
+    --fg-primary-color: var(--russian-violet);
+    --bg-primary-color: var(--old-lace);
+    --color-primary-action: var(--baby-blue);
+
+}

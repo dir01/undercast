@@ -17,6 +17,7 @@ RUN go build -o /app/bin/server /app/cmd/server/main.go
 
 
 FROM node:alpine as build_ui
+ARG api_url
 RUN mkdir -p /app/ui
 WORKDIR /app/ui
 # First, copy package.json and package-lock.json
@@ -25,7 +26,7 @@ COPY ./ui/package* ./
 RUN npm install
 # Then copy everything else and build app
 COPY ./ui ./
-RUN npm run build
+RUN API_URL="$api_url" npm run build
 
 
 FROM alpine as prod

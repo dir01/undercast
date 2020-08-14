@@ -1,0 +1,29 @@
+.header {
+	position: fixed;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 56px;
+	padding: 0;
+	background: var(--fg-primary-color);
+	box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+	z-index: 50;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.header h1 {
+	margin: 0;
+	padding-left: 16px;
+	font-size: 24px;
+	font-weight: 400;
+	color: var(--bg-primary-color);
+}
+
+.header a {
+	color: white;
+	cursor: pointer;
+	padding-right: 16px;
+}

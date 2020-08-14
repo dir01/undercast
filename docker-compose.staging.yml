@@ -8,8 +8,10 @@ services:
       MONGO_URI: mongodb://mongo
       MONGO_DB_NAME: undercast
       DATA_DIR: /data
+    env_file:
+      - .env
     ports:
-      - "80:4242"
+      - "9001:4242"
     depends_on:
       - mongo
   mongo:

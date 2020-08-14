@@ -18,6 +18,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
           tags: staging
           cache: ${{ github.event_name != 'schedule' }}
+          buildargs: api_url=${{ secrets.STAGING_API_URL }}
   deploy:
     name: Deploy staging environment
     needs: publish_docker_image
@@ -25,7 +26,7 @@ jobs:
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
-      - uses: wshihadeh/docker-deployment-action@v1
+      - uses: dir01/docker-deployment-action@master
         with:
           args: up -d
           remote_docker_host: ${{ secrets.DOCKER_HOST }}
@@ -36,3 +37,4 @@ jobs:
           stack_file_name: docker-compose.staging.yml
           docker_prune: true
           pull_images_first: true
+          env_file_contents: ${{ secrets.STAGING_ENV_FILE_CONTENTS }}
