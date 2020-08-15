@@ -25,3 +25,7 @@ func (s *downloadsService) Add(ctx context.Context, source string) (*Download, e
 	}
 	return d, nil
 }
+
+func (s *downloadsService) List(ctx context.Context) ([]Download, error) {
+	return s.repository.List(ctx)
+}

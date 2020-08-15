@@ -61,4 +61,5 @@ func (s *ServerSuite) TearDownSuite() {
 
 func (s *ServerSuite) SetupTest() {
 	s.tempCookies = []string{}
+	s.dropDb()
 }
