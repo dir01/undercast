@@ -32,7 +32,7 @@ const useAuth = (
                 setLoggedIn(false);
             }
         })();
-    }, [api, profile]);
+    }, [api]);
 
     const login = useCallback(
         async (password: string) => {
