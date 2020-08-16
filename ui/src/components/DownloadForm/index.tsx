@@ -1,12 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { FunctionalComponent, h } from "preact";
-import { useState, useCallback, useContext } from "preact/hooks";
-import API, { Download } from "../../api";
-import ApiContext from "../../contexts/ApiContext";
+import { useState, useCallback } from "preact/hooks";
 
-const DownloadForm: FunctionalComponent = () => {
-    const api = useContext(ApiContext) as API;
+import { Download } from "../../api";
 
+type DownloadFormProps = { onSubmitDownload: (d: Download) => Promise<void> };
+
+const DownloadForm: FunctionalComponent<DownloadFormProps> = ({
+    onSubmitDownload
+}: DownloadFormProps) => {
     const [source, setSource] = useState("");
 
     const onInputSource = useCallback((event: any) => {
@@ -16,12 +18,12 @@ const DownloadForm: FunctionalComponent = () => {
     const onSubmit = useCallback(
         (event: any) => {
             const d = new Download({ source });
-            api.saveDownload(d);
+            onSubmitDownload(d);
             setSource("");
             event.preventDefault();
             return false;
         },
-        [source, api]
+        [source, onSubmitDownload]
     );
 
     return (

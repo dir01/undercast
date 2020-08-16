@@ -23,7 +23,8 @@ module.exports = {
     },
     rules: {
         "react/no-unknown-property": ["error", { ignore: ["class"] }],
-        "@typescript-eslint/camelcase": 0
+        "@typescript-eslint/camelcase": 0,
+        "@typescript-eslint/explicit-function-return-type": 0,
     },
     settings: {
         react: {

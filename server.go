@@ -61,6 +61,7 @@ func (s *Server) ListenAndServe(addr string) error {
 func (s *Server) initRoutes() {
 	s.router = mux.NewRouter()
 	s.router.HandleFunc("/api/downloads", s.createDownload()).Methods("POST")
+	s.router.HandleFunc("/api/downloads", s.listDownloads()).Methods("GET")
 	s.router.HandleFunc("/api/auth/login", s.login()).Methods("POST")
 	s.router.HandleFunc("/api/auth/logout", s.logout()).Methods("POST")
 	s.router.HandleFunc("/api/auth/profile", s.getProfile()).Methods("GET")
@@ -119,6 +120,13 @@ func (s *Server) getProfile() http.HandlerFunc {
 			return
 		}
 		s.respond(w, http.StatusOK, profile, nil)
+	}
+}
+
+func (s *Server) listDownloads() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		downloads, err := s.downloadsService.List(r.Context())
+		s.respond(w, http.StatusOK, downloads, err)
 	}
 }
 
