@@ -1,6 +1,7 @@
 import API, { Profile } from "../../api";
 import { useState, useCallback, useEffect } from "preact/hooks";
 import { createContainer } from "../../unstated-next-preact";
+import usePersistedState from "../../utils/hooks/usePersistedState";
 
 const useAuth = (
     api: API | undefined
@@ -12,9 +13,11 @@ const useAuth = (
     logout: () => Promise<void>;
     loginError: string;
 } => {
-    const [isLoggedIn, setLoggedIn] = useState(false);
-    const [isLoading, setLoading] = useState(true);
-    const [profile, setProfile] = useState<Profile | null>(null);
+    const [isLoggedIn, setLoggedIn] = usePersistedState("isLoggedIn", false);
+    const [isLoading, setLoading] = useState(!isLoggedIn);
+    const [profile, setProfile] = usePersistedState<Profile>(
+        "profile" as const
+    );
     const [loginError, setLoginError] = useState("");
 
     useEffect(() => {

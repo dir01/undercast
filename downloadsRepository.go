@@ -2,12 +2,16 @@ package undercast
 
 import (
 	"context"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"time"
 )
 
 type dbDownload struct {
-	ID     string `bson:"_id"`
-	Source string `bson:"source"`
+	ID        string    `bson:"_id"`
+	Source    string    `bson:"source"`
+	CreatedAt time.Time `bson:"createdAt"`
 }
 
 type downloadsRepository struct {
@@ -24,7 +28,10 @@ func (r *downloadsRepository) Save(ctx context.Context, download *Download) erro
 }
 
 func (r *downloadsRepository) List(ctx context.Context) ([]Download, error) {
-	cursor, err := r.db.Collection("downloads").Find(ctx, struct{}{})
+	findOptions := options.Find()
+	findOptions.SetSort(bson.D{{"createdAt", -1}})
+
+	cursor, err := r.db.Collection("downloads").Find(ctx, bson.D{}, findOptions)
 	if err != nil {
 		return nil, err
 	}
