@@ -26,7 +26,7 @@ func Bootstrap(options Options) (*Server, error) {
 		return nil, err
 	}
 
-	downloadsService := &downloadsService{repository: &downloadsRepository{db}}
+	downloadsService := &DownloadsService{repository: &downloadsRepository{db}}
 
 	store := sessions.NewCookieStore([]byte(options.SessionSecret))
 	gob.Register(map[string]interface{}{})
@@ -41,7 +41,7 @@ func Bootstrap(options Options) (*Server, error) {
 }
 
 type Server struct {
-	downloadsService *downloadsService
+	downloadsService *DownloadsService
 	uiDevServerURL   string
 	router           *mux.Router
 	sessionStore     sessions.Store

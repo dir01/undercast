@@ -7,11 +7,12 @@ import (
 )
 
 func (s *ServerSuite) TestCreateDownload() {
-	resp := s.requestAPI("POST", "/api/downloads", map[string]string{"source": "magnet://whatever"})
+	magnetLink := "magnet:?xt=urn:btih:980E4184AEE6F326A9F9E2EE3E9D40ACAA90BC40"
+	resp := s.requestAPI("POST", "/api/downloads", map[string]string{"source": magnetLink})
 	s.Assert().Equal(http.StatusOK, resp.Code)
-	s.Assert().Equal(`magnet://whatever`, gjson.Get(resp.Body.String(), "payload.source").Value())
+	s.Assert().Equal(magnetLink, gjson.Get(resp.Body.String(), "payload.source").Value())
 	dbResultStr := s.findOneAsJSON("downloads", bson.M{})
-	s.Assert().Equal("magnet://whatever", gjson.Get(dbResultStr, "source").Value())
+	s.Assert().Equal(magnetLink, gjson.Get(dbResultStr, "source").Value())
 }
 
 func (s *ServerSuite) TestListDownloads() {
