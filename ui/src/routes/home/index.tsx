@@ -3,7 +3,7 @@ import { useContext } from "preact/hooks";
 
 import DownloadForm from "../../components/DownloadForm";
 import DownloadsList from "../../components/DownloadsList";
-import { Download } from "../../api";
+import { Download, DownloadInput } from "../../api";
 import ApiContext from "../../contexts/ApiContext";
 
 import { useDownloads } from "./hooks";
@@ -16,7 +16,7 @@ const Home: FunctionalComponent = () => {
     return (
         <div class={style.home}>
             <DownloadForm
-                onSubmitDownload={async (d: Download) => {
+                onSubmitDownload={async (d: DownloadInput) => {
                     if (!api) return;
                     addDownload(d);
                     await api.saveDownload(d);

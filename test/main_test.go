@@ -2,38 +2,41 @@ package server_test
 
 import (
 	"context"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/testcontainers/testcontainers-go"
 	"go.mongodb.org/mongo-driver/mongo"
 	"testing"
 	"undercast"
+	"undercast/mocks"
 )
 
 func TestServer(t *testing.T) {
 	s := &ServerSuite{
-		globalPassword: "qwerty",
+		globalPassword:     "qwerty",
+		torrentsDownloader: &mocks.Downloader{},
 	}
 
-	if mongoURI, err := s.getMongoURI(); err == nil {
+	if mongoURI, err := getMongoURI(); err == nil {
 		s.mongoURI = mongoURI
 	} else {
 		t.Error(err)
 	}
 
-	dbName := "test"
+	s.torrentsDownloader.On("OnProgress", mock.AnythingOfType("func(string, *undercast.DownloadInfo)")).Return()
 
 	if server, err := undercast.Bootstrap(undercast.Options{
-		MongoURI:       s.mongoURI,
-		MongoDbName:    dbName,
-		SessionSecret:  "some-secret",
-		GlobalPassword: s.globalPassword,
+		MongoURI:           s.mongoURI,
+		SessionSecret:      "some-secret",
+		GlobalPassword:     s.globalPassword,
+		TorrentsDownloader: s.torrentsDownloader,
 	}); err == nil {
 		s.server = server
 	} else {
 		t.Error(err)
 	}
 
-	if db, err := s.getDatabase(dbName); err == nil {
+	if db, err := getDatabase(s.mongoURI); err == nil {
 		s.db = db
 	} else {
 		t.Error(err)
@@ -44,12 +47,13 @@ func TestServer(t *testing.T) {
 
 type ServerSuite struct {
 	suite.Suite
-	mongoURI       string
-	server         *undercast.Server
-	db             *mongo.Database
-	containers     []testcontainers.Container
-	globalPassword string
-	tempCookies    []string
+	mongoURI           string
+	server             *undercast.Server
+	db                 *mongo.Database
+	containers         []testcontainers.Container
+	globalPassword     string
+	tempCookies        []string
+	torrentsDownloader *mocks.Downloader
 }
 
 func (s *ServerSuite) TearDownSuite() {
@@ -61,5 +65,8 @@ func (s *ServerSuite) TearDownSuite() {
 
 func (s *ServerSuite) SetupTest() {
 	s.tempCookies = []string{}
-	s.dropDb()
+	err := dropDb(s.mongoURI)
+	if err != nil {
+		panic(err)
+	}
 }

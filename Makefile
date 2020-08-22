@@ -11,8 +11,7 @@ test-cover:
 	go test -coverpkg ./... -v -coverprofile=coverage.out -covermode=count ./...
 
 runserver:
-	MONGO_URI=mongodb://localhost/ \
-	MONGO_DB_NAME=test \
+	MONGO_URI=mongodb://localhost/test \
 	UI_DEV_SERVER_URL=$(UI_DEV_SERVER_URL) \
 	SESSION_SECRET=seekreet \
 	GLOBAL_PASSWORD=batman42 \

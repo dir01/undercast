@@ -1,13 +1,12 @@
 import { useContext, useEffect } from "preact/hooks";
 import ApiContext from "../../contexts/ApiContext";
-import { Download } from "../../api";
+import { Download, DownloadInput } from "../../api";
 import usePersistedState from "../../utils/hooks/usePersistedState";
 
 export const useDownloads = () => {
-    const [downloads, setDownloads] = usePersistedState<Download[]>(
-        "downloads",
-        []
-    );
+    const [downloads, setDownloads] = usePersistedState<
+        (Download | DownloadInput)[]
+    >("downloads", []);
 
     const api = useContext(ApiContext);
 
@@ -20,7 +19,8 @@ export const useDownloads = () => {
         });
     }, [api]);
 
-    const addDownload = (d: Download) => setDownloads([d, ...downloads]);
+    const addDownload = (d: Download | DownloadInput) =>
+        setDownloads([d, ...downloads]);
 
     return { downloads, addDownload };
 };
