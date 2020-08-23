@@ -19,6 +19,7 @@ type Download struct {
 	IsDownloadComplete bool
 }
 
+//go:generate moq -out ./mocks/DownloadsRepository.go -pkg mocks . DownloadsRepository
 type DownloadsRepository interface {
 	Save(ctx context.Context, download *Download) error
 	List(ctx context.Context) ([]Download, error)
@@ -33,6 +34,7 @@ type DownloadInfo struct {
 	IsDownloadComplete bool
 }
 
+//go:generate moq -out ./mocks/Downloader.go -pkg mocks . Downloader
 type Downloader interface {
 	IsMatching(source string) bool
 	Download(id string, source string) error

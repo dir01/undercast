@@ -2,7 +2,6 @@ package server_test
 
 import (
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/tidwall/gjson"
 	"testing"
@@ -20,19 +19,18 @@ func TestBootstrapServer(t *testing.T) {
 	require.NoError(insertDownload(mongoURI, &downloadOpts{Source: "some://other-source", IsDownloadComplete: false}))
 	require.NoError(insertDownload(mongoURI, &downloadOpts{Source: "some://yet-another-source", IsDownloadComplete: false}))
 
-	fakeTorrentsDownloader := &mocks.Downloader{}
+	fakeTorrentsDownloader := &mocks.DownloaderMock{}
 
 	var onProgress func(id string, di *undercast.DownloadInfo)
-	fakeTorrentsDownloader.On("OnProgress", mock.Anything).Run(func(args mock.Arguments) {
-		onProgress = args[0].(func(id string, di *undercast.DownloadInfo))
-	})
+	fakeTorrentsDownloader.OnProgressFunc = func(fn func(id string, di *undercast.DownloadInfo)) {
+		onProgress = fn
+	}
 
 	downloadedMagnets := make([][]string, 0, 0)
-	fakeTorrentsDownloader.On("Download", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Run(func(args mock.Arguments) {
-		id := args[0].(string)
-		source := args[1].(string)
+	fakeTorrentsDownloader.DownloadFunc = func(id, source string) error {
 		downloadedMagnets = append(downloadedMagnets, []string{id, source})
-	}).Return(nil)
+		return nil
+	}
 
 	_, err = undercast.Bootstrap(undercast.Options{
 		MongoURI:           mongoURI,

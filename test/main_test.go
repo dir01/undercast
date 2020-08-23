@@ -2,7 +2,6 @@ package server_test
 
 import (
 	"context"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/testcontainers/testcontainers-go"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -14,7 +13,7 @@ import (
 func TestServer(t *testing.T) {
 	s := &ServerSuite{
 		globalPassword:     "qwerty",
-		torrentsDownloader: &mocks.Downloader{},
+		torrentsDownloader: &mocks.DownloaderMock{},
 	}
 
 	if mongoURI, err := getMongoURI(); err == nil {
@@ -23,7 +22,7 @@ func TestServer(t *testing.T) {
 		t.Error(err)
 	}
 
-	s.torrentsDownloader.On("OnProgress", mock.AnythingOfType("func(string, *undercast.DownloadInfo)")).Return()
+	s.torrentsDownloader.OnProgressFunc = func(fn func(string, *undercast.DownloadInfo)) {}
 
 	if server, err := undercast.Bootstrap(undercast.Options{
 		MongoURI:           s.mongoURI,
@@ -53,7 +52,7 @@ type ServerSuite struct {
 	containers         []testcontainers.Container
 	globalPassword     string
 	tempCookies        []string
-	torrentsDownloader *mocks.Downloader
+	torrentsDownloader *mocks.DownloaderMock
 }
 
 func (s *ServerSuite) TearDownSuite() {

@@ -1,7 +1,6 @@
 package server_test
 
 import (
-	"github.com/stretchr/testify/mock"
 	"github.com/tidwall/gjson"
 	"go.mongodb.org/mongo-driver/bson"
 	"net/http"
@@ -11,9 +10,10 @@ func (s *ServerSuite) TestCreateDownload() {
 	magnetLink := "magnet:?xt=urn:btih:980E4184AEE6F326A9F9E2EE3E9D40ACAA90BC40"
 
 	var downloadedId string
-	s.torrentsDownloader.On("Download", mock.AnythingOfType("string"), magnetLink).Run(func(args mock.Arguments) {
-		downloadedId = args[0].(string)
-	}).Return(nil)
+	s.torrentsDownloader.DownloadFunc = func(id, source string) error {
+		downloadedId = id
+		return nil
+	}
 
 	resp := s.requestAPI("POST", "/api/downloads", map[string]string{"source": magnetLink})
 	s.Assert().Equal(http.StatusOK, resp.Code)
