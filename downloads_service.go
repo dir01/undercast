@@ -38,7 +38,7 @@ type DownloadInfo struct {
 type Downloader interface {
 	IsMatching(source string) bool
 	Download(id string, source string) error
-	OnProgress(func(id string, downloadInfo *DownloadInfo))
+	OnProgress(onProgress func(id string, downloadInfo *DownloadInfo))
 }
 
 func NewDownloadsService(repository DownloadsRepository, downloader Downloader) *DownloadsService {

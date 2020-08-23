@@ -48,20 +48,16 @@ func getDatabase(mongoURI string) (*mongo.Database, error) {
 }
 
 func (s *ServerSuite) findOneAsJSON(collectionName string, filter interface{}) string {
-	str, err := findOneAsJSON(s.mongoURI, collectionName, filter)
+	str, err := findOneAsJSON(s.db, collectionName, filter)
 	s.Require().NoError(err)
 	return str
 }
 
-func findOneAsJSON(mongoURI string, collectionName string, filter interface{}) (string, error) {
+func findOneAsJSON(db *mongo.Database, collectionName string, filter interface{}) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	var result map[string]interface{}
-	db, err := getDatabase(mongoURI)
-	if err != nil {
-		return "", err
-	}
-	err = db.Collection(collectionName).FindOne(ctx, filter).Decode(&result)
+	err := db.Collection(collectionName).FindOne(ctx, filter).Decode(&result)
 	if err != nil {
 		return "", err
 	}
@@ -72,13 +68,9 @@ func findOneAsJSON(mongoURI string, collectionName string, filter interface{}) (
 	return string(b), nil
 }
 
-func dropDb(mongoURI string) error {
-	db, err := getDatabase(mongoURI)
-	if err != nil {
-		return err
-	}
+func dropDb(db *mongo.Database) error {
 	ctx := context.Background()
-	err = db.Drop(ctx)
+	err := db.Drop(ctx)
 	if err != nil {
 		return err
 	}
@@ -92,20 +84,16 @@ type downloadOpts struct {
 }
 
 func (s *ServerSuite) insertDownload(opts *downloadOpts) {
-	err := insertDownload(s.mongoURI, opts)
+	err := insertDownload(s.db, opts)
 	s.Require().NoError(err)
 }
 
-func insertDownload(mongoURI string, opts *downloadOpts) error {
+func insertDownload(db *mongo.Database, opts *downloadOpts) error {
 	if opts.ID == "" {
 		opts.ID = uuid.NewV4().String()
 	}
-	db, err := getDatabase(mongoURI)
-	if err != nil {
-		return err
-	}
 	ctx := context.Background()
-	_, err = db.Collection("downloads").InsertOne(ctx, opts)
+	_, err := db.Collection("downloads").InsertOne(ctx, opts)
 	if err != nil {
 		return err
 	}

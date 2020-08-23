@@ -24,7 +24,7 @@ var _ undercast.Downloader = &DownloaderMock{}
 //             IsMatchingFunc: func(source string) bool {
 // 	               panic("mock out the IsMatching method")
 //             },
-//             OnProgressFunc: func(in1 func(id string, downloadInfo *undercast.DownloadInfo))  {
+//             OnProgressFunc: func(onProgress func(id string, downloadInfo *undercast.DownloadInfo))  {
 // 	               panic("mock out the OnProgress method")
 //             },
 //         }
@@ -41,7 +41,7 @@ type DownloaderMock struct {
 	IsMatchingFunc func(source string) bool
 
 	// OnProgressFunc mocks the OnProgress method.
-	OnProgressFunc func(in1 func(id string, downloadInfo *undercast.DownloadInfo))
+	OnProgressFunc func(onProgress func(id string, downloadInfo *undercast.DownloadInfo))
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -59,8 +59,8 @@ type DownloaderMock struct {
 		}
 		// OnProgress holds details about calls to the OnProgress method.
 		OnProgress []struct {
-			// In1 is the in1 argument value.
-			In1 func(id string, downloadInfo *undercast.DownloadInfo)
+			// OnProgress is the onProgress argument value.
+			OnProgress func(id string, downloadInfo *undercast.DownloadInfo)
 		}
 	}
 	lockDownload   sync.RWMutex
@@ -135,29 +135,29 @@ func (mock *DownloaderMock) IsMatchingCalls() []struct {
 }
 
 // OnProgress calls OnProgressFunc.
-func (mock *DownloaderMock) OnProgress(in1 func(id string, downloadInfo *undercast.DownloadInfo)) {
+func (mock *DownloaderMock) OnProgress(onProgress func(id string, downloadInfo *undercast.DownloadInfo)) {
 	if mock.OnProgressFunc == nil {
 		panic("DownloaderMock.OnProgressFunc: method is nil but Downloader.OnProgress was just called")
 	}
 	callInfo := struct {
-		In1 func(id string, downloadInfo *undercast.DownloadInfo)
+		OnProgress func(id string, downloadInfo *undercast.DownloadInfo)
 	}{
-		In1: in1,
+		OnProgress: onProgress,
 	}
 	mock.lockOnProgress.Lock()
 	mock.calls.OnProgress = append(mock.calls.OnProgress, callInfo)
 	mock.lockOnProgress.Unlock()
-	mock.OnProgressFunc(in1)
+	mock.OnProgressFunc(onProgress)
 }
 
 // OnProgressCalls gets all the calls that were made to OnProgress.
 // Check the length with:
 //     len(mockedDownloader.OnProgressCalls())
 func (mock *DownloaderMock) OnProgressCalls() []struct {
-	In1 func(id string, downloadInfo *undercast.DownloadInfo)
+	OnProgress func(id string, downloadInfo *undercast.DownloadInfo)
 } {
 	var calls []struct {
-		In1 func(id string, downloadInfo *undercast.DownloadInfo)
+		OnProgress func(id string, downloadInfo *undercast.DownloadInfo)
 	}
 	mock.lockOnProgress.RLock()
 	calls = mock.calls.OnProgress

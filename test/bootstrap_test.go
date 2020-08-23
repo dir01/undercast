@@ -1,69 +1,72 @@
 package server_test
 
 import (
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 	"github.com/tidwall/gjson"
+	"go.mongodb.org/mongo-driver/mongo"
 	"testing"
 	"undercast"
 	"undercast/mocks"
 )
 
 func TestBootstrapServer(t *testing.T) {
-	mongoURI, err := getMongoURI()
 	require := require.New(t)
-	assert := assert.New(t)
+	mongoURI, err := getMongoURI()
+	db, err := getDatabase(mongoURI)
 	require.NoError(err)
+	require.NoError(insertDownload(db, &downloadOpts{Source: "some://source", IsDownloadComplete: true}))
+	require.NoError(insertDownload(db, &downloadOpts{Source: "some://other-source", IsDownloadComplete: false}))
+	require.NoError(insertDownload(db, &downloadOpts{Source: "some://yet-another-source", IsDownloadComplete: false}))
+	s := &BootstrapSuite{db: db, mongoURI: mongoURI}
+	suite.Run(t, s)
+}
 
-	require.NoError(insertDownload(mongoURI, &downloadOpts{Source: "some://source", IsDownloadComplete: true}))
-	require.NoError(insertDownload(mongoURI, &downloadOpts{Source: "some://other-source", IsDownloadComplete: false}))
-	require.NoError(insertDownload(mongoURI, &downloadOpts{Source: "some://yet-another-source", IsDownloadComplete: false}))
+type BootstrapSuite struct {
+	suite.Suite
+	mongoURI       string
+	db             *mongo.Database
+	downloaderMock *mocks.DownloaderMock
+}
 
-	fakeTorrentsDownloader := &mocks.DownloaderMock{}
+func (suite *BootstrapSuite) SetupTest() {
+	suite.downloaderMock = &mocks.DownloaderMock{
+		DownloadFunc:   func(id, source string) error { return nil },
+		IsMatchingFunc: nil,
+		OnProgressFunc: func(fn func(id string, di *undercast.DownloadInfo)) {},
+	}
+}
 
+func (suite *BootstrapSuite) TestIncompleteDownloadsResumed() {
+	_, err := undercast.Bootstrap(undercast.Options{
+		MongoURI:           suite.mongoURI,
+		TorrentsDownloader: suite.downloaderMock,
+	})
+
+	suite.Require().NoError(err)
+	suite.Require().Len(suite.downloaderMock.DownloadCalls(), 2)
+	suite.Require().Equal("some://other-source", suite.downloaderMock.DownloadCalls()[0].Source)
+	suite.Require().Equal("some://yet-another-source", suite.downloaderMock.DownloadCalls()[1].Source)
+}
+
+func (suite *BootstrapSuite) TestProgressUpdate() {
 	var onProgress func(id string, di *undercast.DownloadInfo)
-	fakeTorrentsDownloader.OnProgressFunc = func(fn func(id string, di *undercast.DownloadInfo)) {
+	suite.downloaderMock.OnProgressFunc = func(fn func(id string, di *undercast.DownloadInfo)) {
 		onProgress = fn
 	}
 
-	downloadedMagnets := make([][]string, 0, 0)
-	fakeTorrentsDownloader.DownloadFunc = func(id, source string) error {
-		downloadedMagnets = append(downloadedMagnets, []string{id, source})
-		return nil
-	}
-
-	_, err = undercast.Bootstrap(undercast.Options{
-		MongoURI:           mongoURI,
-		TorrentsDownloader: fakeTorrentsDownloader,
+	_, err := undercast.Bootstrap(undercast.Options{
+		MongoURI:           suite.mongoURI,
+		TorrentsDownloader: suite.downloaderMock,
 	})
-	require.NoError(err)
-
-	require.Len(downloadedMagnets, 2)
-	require.Equal("some://other-source", downloadedMagnets[0][1])
-	otherSourceId := downloadedMagnets[0][0]
-	require.Equal("some://yet-another-source", downloadedMagnets[1][1])
-	yetAnotherSourceId := downloadedMagnets[1][0]
-
-	onProgress(otherSourceId, &undercast.DownloadInfo{
+	id := suite.downloaderMock.DownloadCalls()[0].ID
+	onProgress(id, &undercast.DownloadInfo{
 		TotalBytes:    int64(100),
 		CompleteBytes: int64(1),
 	})
 
-	onProgress(yetAnotherSourceId, &undercast.DownloadInfo{
-		TotalBytes:    int64(200),
-		CompleteBytes: int64(2),
-	})
-
-	otherDownload, err := findOneAsJSON(mongoURI, "downloads", map[string]string{"_id": otherSourceId})
-	require.NoError(err)
-	assert.Equal("some://other-source", gjson.Get(otherDownload, "source").Value())
-	assert.EqualValues(100, gjson.Get(otherDownload, "totalBytes").Value())
-	assert.EqualValues(1, gjson.Get(otherDownload, "completeBytes").Value())
-
-	yetAnotherDownload, err := findOneAsJSON(mongoURI, "downloads", map[string]string{"_id": yetAnotherSourceId})
-	require.NoError(err)
-	assert.Equal("some://yet-another-source", gjson.Get(yetAnotherDownload, "source").Value())
-	assert.EqualValues(200, gjson.Get(yetAnotherDownload, "totalBytes").Value())
-	assert.EqualValues(2, gjson.Get(yetAnotherDownload, "completeBytes").Value())
-
+	otherDownload, err := findOneAsJSON(suite.db, "downloads", map[string]string{"_id": id})
+	suite.Require().NoError(err)
+	suite.Assert().EqualValues(100, gjson.Get(otherDownload, "totalBytes").Value())
+	suite.Assert().EqualValues(1, gjson.Get(otherDownload, "completeBytes").Value())
 }

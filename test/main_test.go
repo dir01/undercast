@@ -16,16 +16,15 @@ func TestServer(t *testing.T) {
 		torrentsDownloader: &mocks.DownloaderMock{},
 	}
 
-	if mongoURI, err := getMongoURI(); err == nil {
-		s.mongoURI = mongoURI
-	} else {
+	mongoURI, err := getMongoURI()
+	if err != nil {
 		t.Error(err)
 	}
 
 	s.torrentsDownloader.OnProgressFunc = func(fn func(string, *undercast.DownloadInfo)) {}
 
 	if server, err := undercast.Bootstrap(undercast.Options{
-		MongoURI:           s.mongoURI,
+		MongoURI:           mongoURI,
 		SessionSecret:      "some-secret",
 		GlobalPassword:     s.globalPassword,
 		TorrentsDownloader: s.torrentsDownloader,
@@ -35,7 +34,7 @@ func TestServer(t *testing.T) {
 		t.Error(err)
 	}
 
-	if db, err := getDatabase(s.mongoURI); err == nil {
+	if db, err := getDatabase(mongoURI); err == nil {
 		s.db = db
 	} else {
 		t.Error(err)
@@ -46,7 +45,6 @@ func TestServer(t *testing.T) {
 
 type ServerSuite struct {
 	suite.Suite
-	mongoURI           string
 	server             *undercast.Server
 	db                 *mongo.Database
 	containers         []testcontainers.Container
@@ -64,7 +62,7 @@ func (s *ServerSuite) TearDownSuite() {
 
 func (s *ServerSuite) SetupTest() {
 	s.tempCookies = []string{}
-	err := dropDb(s.mongoURI)
+	err := dropDb(s.db)
 	if err != nil {
 		panic(err)
 	}
