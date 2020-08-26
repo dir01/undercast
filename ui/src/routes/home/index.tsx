@@ -3,7 +3,7 @@ import { useContext } from "preact/hooks";
 
 import DownloadForm from "../../components/DownloadForm";
 import DownloadsList from "../../components/DownloadsList";
-import { Download, DownloadInput } from "../../api";
+import { DownloadInput } from "../../api";
 import ApiContext from "../../contexts/ApiContext";
 
 import { useDownloads } from "./hooks";

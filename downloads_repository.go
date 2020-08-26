@@ -15,6 +15,7 @@ type dbDownload struct {
 	CreatedAt          time.Time `bson:"createdAt"`
 	TotalBytes         int64     `bson:"totalBytes"`
 	CompleteBytes      int64     `bson:"completeBytes"`
+	Files              []string  `bson:"files"`
 	IsDownloadComplete bool      `bson:"isDownloadComplete"`
 }
 

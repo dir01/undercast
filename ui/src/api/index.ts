@@ -70,13 +70,12 @@ type RawDownload = {
     createdAt: string;
     totalBytes: number;
     completeBytes: number;
+    files: string[];
 };
 
 export class DownloadInput {
     public id: string;
     public source: string;
-    public name = undefined;
-    public percentDone = undefined;
 
     constructor({ source }: { source: string }) {
         this.id = uuid4();
@@ -89,12 +88,21 @@ export class Download {
     public source: string;
     public name: string;
     public percentDone: number;
+    public files: string[];
 
-    constructor({ id, source, name, completeBytes, totalBytes }: RawDownload) {
+    constructor({
+        id,
+        source,
+        name,
+        completeBytes,
+        totalBytes,
+        files
+    }: RawDownload) {
         this.id = id;
         this.name = name;
         this.source = source;
         this.percentDone = Math.round((completeBytes / totalBytes) * 100);
+        this.files = files;
     }
 }
 

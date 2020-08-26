@@ -20,7 +20,8 @@ func NewTorrentsDownloader() *TorrentsDownloader {
 
 type TorrentsDownloader struct {
 	torrentClient *anacrolix.Client
-	onProgress    func(id string, di *DownloadInfo)
+	onProgress    func(id string, p *DownloadProgress)
+	onInfo        func(id string, di *DownloadInfo)
 }
 
 func (td *TorrentsDownloader) IsMatching(source string) bool {
@@ -38,6 +39,13 @@ func (td *TorrentsDownloader) Download(id string, source string) error {
 		<-t.GotInfo()
 		t.DownloadAll()
 
+		if td.onInfo != nil {
+			td.onInfo(id, &DownloadInfo{
+				Name:  t.Name(),
+				Files: extractFilenames(t.Files()),
+			})
+		}
+
 		isComplete := false
 		for !isComplete {
 			time.Sleep(1 * time.Second)
@@ -49,19 +57,30 @@ func (td *TorrentsDownloader) Download(id string, source string) error {
 			if bytesMissing == 0 {
 				isComplete = true
 			}
-			di := &DownloadInfo{
+			p := &DownloadProgress{
 				TotalBytes:         bytesMissing + bytesCompleted,
 				CompleteBytes:      bytesCompleted,
 				IsDownloadComplete: isComplete,
-				Name:               t.Name(),
 			}
-			td.onProgress(id, di)
+			td.onProgress(id, p)
 		}
 	}()
 
 	return nil
 }
 
-func (td *TorrentsDownloader) OnProgress(onProgress func(id string, di *DownloadInfo)) {
+func (td *TorrentsDownloader) OnProgress(onProgress func(id string, p *DownloadProgress)) {
 	td.onProgress = onProgress
+}
+
+func (td *TorrentsDownloader) OnInfo(onInfo func(id string, di *DownloadInfo)) {
+	td.onInfo = onInfo
+}
+
+func extractFilenames(files []*anacrolix.File) []string {
+	result := make([]string, 0, len(files))
+	for _, f := range files {
+		result = append(result, f.Path())
+	}
+	return result
 }

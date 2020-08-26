@@ -16,6 +16,7 @@ type Download struct {
 	CreatedAt          time.Time `json:"createdAt"`
 	TotalBytes         int64     `json:"totalBytes"`
 	CompleteBytes      int64     `json:"completeBytes"`
+	Files              []string  `json:"files"`
 	IsDownloadComplete bool
 }
 
@@ -28,17 +29,22 @@ type DownloadsRepository interface {
 }
 
 type DownloadInfo struct {
-	Name               string
+	Name  string
+	Files []string
+}
+
+type DownloadProgress struct {
 	TotalBytes         int64
 	CompleteBytes      int64
 	IsDownloadComplete bool
 }
 
-//go:generate moq -out ./mocks/Downloader.go -pkg mocks . Downloader
+//go:generate moq -stub -out ./mocks/Downloader.go -pkg mocks . Downloader
 type Downloader interface {
 	IsMatching(source string) bool
 	Download(id string, source string) error
-	OnProgress(onProgress func(id string, downloadInfo *DownloadInfo))
+	OnInfo(onInfo func(id string, info *DownloadInfo))
+	OnProgress(onProgress func(id string, progress *DownloadProgress))
 }
 
 func NewDownloadsService(repository DownloadsRepository, downloader Downloader) *DownloadsService {
@@ -53,7 +59,21 @@ type DownloadsService struct {
 func (s *DownloadsService) Run() {
 	ctx := context.Background()
 
-	s.downloader.OnProgress(func(id string, di *DownloadInfo) {
+	s.downloader.OnInfo(func(id string, di *DownloadInfo) {
+		download, err := s.repository.GetById(ctx, id)
+		if err != nil {
+			log.Printf("Repository failed to load download with id %s:\n%s\n", id, err.Error())
+			return
+		}
+		download.Name = di.Name
+		download.Files = di.Files
+		err = s.repository.Save(context.Background(), download)
+		if err != nil {
+			log.Printf("Repository failed to save download with id %s:\n%s\n", id, err.Error())
+		}
+	})
+
+	s.downloader.OnProgress(func(id string, di *DownloadProgress) {
 		download, err := s.repository.GetById(ctx, id)
 		if err != nil {
 			log.Printf("Repository failed to load download with id %s:\n%s\n", id, err.Error())
@@ -62,7 +82,6 @@ func (s *DownloadsService) Run() {
 		download.CompleteBytes = di.CompleteBytes
 		download.TotalBytes = di.TotalBytes
 		download.IsDownloadComplete = di.IsDownloadComplete
-		download.Name = di.Name
 		err = s.repository.Save(context.Background(), download)
 		if err != nil {
 			log.Printf("Repository failed to save download with id %s:\n%s\n", id, err.Error())

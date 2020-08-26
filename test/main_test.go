@@ -21,7 +21,7 @@ func TestServer(t *testing.T) {
 		t.Error(err)
 	}
 
-	s.torrentsDownloader.OnProgressFunc = func(fn func(string, *undercast.DownloadInfo)) {}
+	s.torrentsDownloader.OnProgressFunc = func(fn func(string, *undercast.DownloadProgress)) {}
 
 	if server, err := undercast.Bootstrap(undercast.Options{
 		MongoURI:           mongoURI,

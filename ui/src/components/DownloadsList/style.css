@@ -1,0 +1,17 @@
+.downloadList {}
+
+.downloadItem {
+    list-style-type: none;
+    border-bottom: 1px solid lightgray;
+    padding: 20px 0;
+}
+
+.fileList {
+    list-style-type: none;
+}
+.fileList li {
+    margin: 0;
+    padding: 0;
+}
+
+.downloadItem .title {}

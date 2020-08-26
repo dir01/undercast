@@ -30,11 +30,7 @@ type BootstrapSuite struct {
 }
 
 func (suite *BootstrapSuite) SetupTest() {
-	suite.downloaderMock = &mocks.DownloaderMock{
-		DownloadFunc:   func(id, source string) error { return nil },
-		IsMatchingFunc: nil,
-		OnProgressFunc: func(fn func(id string, di *undercast.DownloadInfo)) {},
-	}
+	suite.downloaderMock = &mocks.DownloaderMock{}
 }
 
 func (suite *BootstrapSuite) TestIncompleteDownloadsResumed() {
@@ -49,9 +45,31 @@ func (suite *BootstrapSuite) TestIncompleteDownloadsResumed() {
 	suite.Require().Equal("some://yet-another-source", suite.downloaderMock.DownloadCalls()[1].Source)
 }
 
+func (suite *BootstrapSuite) TestInfoUpdate() {
+	var onInfo func(id string, di *undercast.DownloadInfo)
+	suite.downloaderMock.OnInfoFunc = func(fn func(id string, di *undercast.DownloadInfo)) {
+		onInfo = fn
+	}
+
+	_, err := undercast.Bootstrap(undercast.Options{
+		MongoURI:           suite.mongoURI,
+		TorrentsDownloader: suite.downloaderMock,
+	})
+	id := suite.downloaderMock.DownloadCalls()[0].ID
+	onInfo(id, &undercast.DownloadInfo{
+		Name:  "Some-torrent-name",
+		Files: []string{"foo/bar_1", "foo/bar_2"},
+	})
+
+	download, err := findOneAsJSON(suite.db, "downloads", map[string]string{"_id": id})
+	suite.Require().NoError(err)
+	suite.Assert().Equal("Some-torrent-name", gjson.Get(download, "name").Value())
+	suite.Assert().Equal(`["foo/bar_1","foo/bar_2"]`, gjson.Get(download, "files").String())
+}
+
 func (suite *BootstrapSuite) TestProgressUpdate() {
-	var onProgress func(id string, di *undercast.DownloadInfo)
-	suite.downloaderMock.OnProgressFunc = func(fn func(id string, di *undercast.DownloadInfo)) {
+	var onProgress func(id string, p *undercast.DownloadProgress)
+	suite.downloaderMock.OnProgressFunc = func(fn func(id string, p *undercast.DownloadProgress)) {
 		onProgress = fn
 	}
 
@@ -60,13 +78,13 @@ func (suite *BootstrapSuite) TestProgressUpdate() {
 		TorrentsDownloader: suite.downloaderMock,
 	})
 	id := suite.downloaderMock.DownloadCalls()[0].ID
-	onProgress(id, &undercast.DownloadInfo{
+	onProgress(id, &undercast.DownloadProgress{
 		TotalBytes:    int64(100),
 		CompleteBytes: int64(1),
 	})
 
-	otherDownload, err := findOneAsJSON(suite.db, "downloads", map[string]string{"_id": id})
+	download, err := findOneAsJSON(suite.db, "downloads", map[string]string{"_id": id})
 	suite.Require().NoError(err)
-	suite.Assert().EqualValues(100, gjson.Get(otherDownload, "totalBytes").Value())
-	suite.Assert().EqualValues(1, gjson.Get(otherDownload, "completeBytes").Value())
+	suite.Assert().EqualValues(100, gjson.Get(download, "totalBytes").Value())
+	suite.Assert().EqualValues(1, gjson.Get(download, "completeBytes").Value())
 }

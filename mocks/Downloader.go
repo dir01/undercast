@@ -24,7 +24,10 @@ var _ undercast.Downloader = &DownloaderMock{}
 //             IsMatchingFunc: func(source string) bool {
 // 	               panic("mock out the IsMatching method")
 //             },
-//             OnProgressFunc: func(onProgress func(id string, downloadInfo *undercast.DownloadInfo))  {
+//             OnInfoFunc: func(onInfo func(id string, info *undercast.DownloadInfo))  {
+// 	               panic("mock out the OnInfo method")
+//             },
+//             OnProgressFunc: func(onProgress func(id string, progress *undercast.DownloadProgress))  {
 // 	               panic("mock out the OnProgress method")
 //             },
 //         }
@@ -40,8 +43,11 @@ type DownloaderMock struct {
 	// IsMatchingFunc mocks the IsMatching method.
 	IsMatchingFunc func(source string) bool
 
+	// OnInfoFunc mocks the OnInfo method.
+	OnInfoFunc func(onInfo func(id string, info *undercast.DownloadInfo))
+
 	// OnProgressFunc mocks the OnProgress method.
-	OnProgressFunc func(onProgress func(id string, downloadInfo *undercast.DownloadInfo))
+	OnProgressFunc func(onProgress func(id string, progress *undercast.DownloadProgress))
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -57,22 +63,25 @@ type DownloaderMock struct {
 			// Source is the source argument value.
 			Source string
 		}
+		// OnInfo holds details about calls to the OnInfo method.
+		OnInfo []struct {
+			// OnInfo is the onInfo argument value.
+			OnInfo func(id string, info *undercast.DownloadInfo)
+		}
 		// OnProgress holds details about calls to the OnProgress method.
 		OnProgress []struct {
 			// OnProgress is the onProgress argument value.
-			OnProgress func(id string, downloadInfo *undercast.DownloadInfo)
+			OnProgress func(id string, progress *undercast.DownloadProgress)
 		}
 	}
 	lockDownload   sync.RWMutex
 	lockIsMatching sync.RWMutex
+	lockOnInfo     sync.RWMutex
 	lockOnProgress sync.RWMutex
 }
 
 // Download calls DownloadFunc.
 func (mock *DownloaderMock) Download(id string, source string) error {
-	if mock.DownloadFunc == nil {
-		panic("DownloaderMock.DownloadFunc: method is nil but Downloader.Download was just called")
-	}
 	callInfo := struct {
 		ID     string
 		Source string
@@ -83,6 +92,12 @@ func (mock *DownloaderMock) Download(id string, source string) error {
 	mock.lockDownload.Lock()
 	mock.calls.Download = append(mock.calls.Download, callInfo)
 	mock.lockDownload.Unlock()
+	if mock.DownloadFunc == nil {
+		var (
+			out1 error
+		)
+		return out1
+	}
 	return mock.DownloadFunc(id, source)
 }
 
@@ -105,9 +120,6 @@ func (mock *DownloaderMock) DownloadCalls() []struct {
 
 // IsMatching calls IsMatchingFunc.
 func (mock *DownloaderMock) IsMatching(source string) bool {
-	if mock.IsMatchingFunc == nil {
-		panic("DownloaderMock.IsMatchingFunc: method is nil but Downloader.IsMatching was just called")
-	}
 	callInfo := struct {
 		Source string
 	}{
@@ -116,6 +128,12 @@ func (mock *DownloaderMock) IsMatching(source string) bool {
 	mock.lockIsMatching.Lock()
 	mock.calls.IsMatching = append(mock.calls.IsMatching, callInfo)
 	mock.lockIsMatching.Unlock()
+	if mock.IsMatchingFunc == nil {
+		var (
+			out1 bool
+		)
+		return out1
+	}
 	return mock.IsMatchingFunc(source)
 }
 
@@ -134,19 +152,50 @@ func (mock *DownloaderMock) IsMatchingCalls() []struct {
 	return calls
 }
 
-// OnProgress calls OnProgressFunc.
-func (mock *DownloaderMock) OnProgress(onProgress func(id string, downloadInfo *undercast.DownloadInfo)) {
-	if mock.OnProgressFunc == nil {
-		panic("DownloaderMock.OnProgressFunc: method is nil but Downloader.OnProgress was just called")
-	}
+// OnInfo calls OnInfoFunc.
+func (mock *DownloaderMock) OnInfo(onInfo func(id string, info *undercast.DownloadInfo)) {
 	callInfo := struct {
-		OnProgress func(id string, downloadInfo *undercast.DownloadInfo)
+		OnInfo func(id string, info *undercast.DownloadInfo)
+	}{
+		OnInfo: onInfo,
+	}
+	mock.lockOnInfo.Lock()
+	mock.calls.OnInfo = append(mock.calls.OnInfo, callInfo)
+	mock.lockOnInfo.Unlock()
+	if mock.OnInfoFunc == nil {
+		return
+	}
+	mock.OnInfoFunc(onInfo)
+}
+
+// OnInfoCalls gets all the calls that were made to OnInfo.
+// Check the length with:
+//     len(mockedDownloader.OnInfoCalls())
+func (mock *DownloaderMock) OnInfoCalls() []struct {
+	OnInfo func(id string, info *undercast.DownloadInfo)
+} {
+	var calls []struct {
+		OnInfo func(id string, info *undercast.DownloadInfo)
+	}
+	mock.lockOnInfo.RLock()
+	calls = mock.calls.OnInfo
+	mock.lockOnInfo.RUnlock()
+	return calls
+}
+
+// OnProgress calls OnProgressFunc.
+func (mock *DownloaderMock) OnProgress(onProgress func(id string, progress *undercast.DownloadProgress)) {
+	callInfo := struct {
+		OnProgress func(id string, progress *undercast.DownloadProgress)
 	}{
 		OnProgress: onProgress,
 	}
 	mock.lockOnProgress.Lock()
 	mock.calls.OnProgress = append(mock.calls.OnProgress, callInfo)
 	mock.lockOnProgress.Unlock()
+	if mock.OnProgressFunc == nil {
+		return
+	}
 	mock.OnProgressFunc(onProgress)
 }
 
@@ -154,10 +203,10 @@ func (mock *DownloaderMock) OnProgress(onProgress func(id string, downloadInfo *
 // Check the length with:
 //     len(mockedDownloader.OnProgressCalls())
 func (mock *DownloaderMock) OnProgressCalls() []struct {
-	OnProgress func(id string, downloadInfo *undercast.DownloadInfo)
+	OnProgress func(id string, progress *undercast.DownloadProgress)
 } {
 	var calls []struct {
-		OnProgress func(id string, downloadInfo *undercast.DownloadInfo)
+		OnProgress func(id string, progress *undercast.DownloadProgress)
 	}
 	mock.lockOnProgress.RLock()
 	calls = mock.calls.OnProgress
