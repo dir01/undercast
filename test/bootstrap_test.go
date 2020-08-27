@@ -13,6 +13,7 @@ import (
 func TestBootstrapServer(t *testing.T) {
 	require := require.New(t)
 	mongoURI, err := getMongoURI()
+	require.NoError(err)
 	db, err := getDatabase(mongoURI)
 	require.NoError(err)
 	require.NoError(insertDownload(db, &downloadOpts{Source: "some://source", IsDownloadComplete: true}))

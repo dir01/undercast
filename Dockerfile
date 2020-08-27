@@ -3,7 +3,7 @@ WORKDIR /app
 COPY . .
 RUN rm -rf ./ui
 
-FROM golang:alpine as build_server
+FROM golang:1.14.7-alpine as build_server
 RUN apk add npm make gcc g++; mkdir -p /app
 WORKDIR /app
 # Copy lockfiles first to make sure that
