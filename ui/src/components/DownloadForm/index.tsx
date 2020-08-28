@@ -2,9 +2,11 @@
 import { FunctionalComponent, h } from "preact";
 import { useState, useCallback } from "preact/hooks";
 
-import { Download } from "../../api";
+import { DownloadInput } from "../../api";
 
-type DownloadFormProps = { onSubmitDownload: (d: Download) => Promise<void> };
+type DownloadFormProps = {
+    onSubmitDownload: (d: DownloadInput) => Promise<void>;
+};
 
 const DownloadForm: FunctionalComponent<DownloadFormProps> = ({
     onSubmitDownload
@@ -17,7 +19,7 @@ const DownloadForm: FunctionalComponent<DownloadFormProps> = ({
 
     const onSubmit = useCallback(
         (event: any) => {
-            const d = new Download({ source });
+            const d = new DownloadInput({ source });
             onSubmitDownload(d);
             setSource("");
             event.preventDefault();

@@ -11,8 +11,7 @@ test-cover:
 	go test -coverpkg ./... -v -coverprofile=coverage.out -covermode=count ./...
 
 runserver:
-	MONGO_URI=mongodb://localhost/ \
-	MONGO_DB_NAME=test \
+	MONGO_URI=mongodb://localhost/test \
 	UI_DEV_SERVER_URL=$(UI_DEV_SERVER_URL) \
 	SESSION_SECRET=seekreet \
 	GLOBAL_PASSWORD=batman42 \
@@ -23,7 +22,7 @@ runserver:
 runserver-dev: UI_DEV_SERVER_URL="http://localhost:8080"
 runserver-dev:
 	go get github.com/cespare/reflex
-	reflex -s -r '\.go$$' -R '^ui/' make runserver
+	reflex -s -r '\.go$$' -R '^ui/' -R '^data/' make runserver
 
 build-ui:
 	time bash -c "cd ui; npm i; npm run build"

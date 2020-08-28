@@ -13,20 +13,21 @@ import (
 )
 
 type Options struct {
-	MongoURI       string
-	MongoDbName    string
-	UIDevServerURL string
-	SessionSecret  string
-	GlobalPassword string
+	MongoURI           string
+	UIDevServerURL     string
+	SessionSecret      string
+	GlobalPassword     string
+	TorrentsDownloader Downloader
 }
 
 func Bootstrap(options Options) (*Server, error) {
-	db, err := getDb(options.MongoURI, options.MongoDbName)
+	db, err := GetDb(options.MongoURI)
 	if err != nil {
 		return nil, err
 	}
 
-	downloadsService := &downloadsService{repository: &downloadsRepository{db}}
+	downloadsService := NewDownloadsService(&downloadsRepository{db}, options.TorrentsDownloader)
+	downloadsService.Run()
 
 	store := sessions.NewCookieStore([]byte(options.SessionSecret))
 	gob.Register(map[string]interface{}{})
@@ -41,7 +42,7 @@ func Bootstrap(options Options) (*Server, error) {
 }
 
 type Server struct {
-	downloadsService *downloadsService
+	downloadsService *DownloadsService
 	uiDevServerURL   string
 	router           *mux.Router
 	sessionStore     sessions.Store

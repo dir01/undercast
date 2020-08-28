@@ -8,11 +8,11 @@ import (
 
 func main() {
 	server, err := undercast.Bootstrap(undercast.Options{
-		MongoURI:       os.Getenv("MONGO_URI"),
-		MongoDbName:    os.Getenv("MONGO_DB_NAME"),
-		UIDevServerURL: os.Getenv("UI_DEV_SERVER_URL"),
-		SessionSecret:  os.Getenv("SESSION_SECRET"),
-		GlobalPassword: os.Getenv("GLOBAL_PASSWORD"),
+		MongoURI:           os.Getenv("MONGO_URI"),
+		UIDevServerURL:     os.Getenv("UI_DEV_SERVER_URL"),
+		SessionSecret:      os.Getenv("SESSION_SECRET"),
+		GlobalPassword:     os.Getenv("GLOBAL_PASSWORD"),
+		TorrentsDownloader: undercast.NewTorrentsDownloader(),
 	})
 	if err != nil {
 		log.Fatal(err)

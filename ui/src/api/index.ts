@@ -11,7 +11,7 @@ type RawApiResponse<P extends unknown, E extends string> =
 export default class API {
     constructor(private baseURL: string) {}
 
-    public async saveDownload(download: Download): Promise<void> {
+    public async saveDownload(download: DownloadInput): Promise<void> {
         await this.request("post", "/downloads", download);
     }
 
@@ -63,15 +63,46 @@ export default class API {
     }
 }
 
-type RawDownload = { id: string; source: string };
+type RawDownload = {
+    id: string;
+    source: string;
+    name: string;
+    createdAt: string;
+    totalBytes: number;
+    completeBytes: number;
+    files: string[];
+};
+
+export class DownloadInput {
+    public id: string;
+    public source: string;
+
+    constructor({ source }: { source: string }) {
+        this.id = uuid4();
+        this.source = source;
+    }
+}
 
 export class Download {
-    public source: string;
     public id: string;
+    public source: string;
+    public name: string;
+    public percentDone: number;
+    public files: string[];
 
-    constructor({ id, source }: { id?: string; source: string }) {
-        this.id = id || uuid4();
+    constructor({
+        id,
+        source,
+        name,
+        completeBytes,
+        totalBytes,
+        files
+    }: RawDownload) {
+        this.id = id;
+        this.name = name;
         this.source = source;
+        this.percentDone = Math.round((completeBytes / totalBytes) * 100);
+        this.files = files;
     }
 }
 
