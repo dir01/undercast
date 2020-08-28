@@ -78,9 +78,11 @@ func dropDb(db *mongo.Database) error {
 }
 
 type downloadOpts struct {
-	ID                 string `bson:"_id"`
-	Source             string `bson:"source"`
-	IsDownloadComplete bool   `bson:"isDownloadComplete"`
+	ID                 string   `bson:"_id"`
+	Source             string   `bson:"source"`
+	IsDownloadComplete bool     `bson:"isDownloadComplete"`
+	RootDir            string   `bson:"rootDir"`
+	Files              []string `bson:"files"`
 }
 
 func (s *ServerSuite) insertDownload(opts *downloadOpts) {

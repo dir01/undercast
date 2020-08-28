@@ -3,8 +3,8 @@ package undercast
 import (
 	"context"
 	"fmt"
-	uuid "github.com/satori/go.uuid"
 	"log"
+	"path"
 	"regexp"
 	"time"
 )
@@ -17,6 +17,7 @@ type Download struct {
 	TotalBytes         int64     `json:"totalBytes"`
 	CompleteBytes      int64     `json:"completeBytes"`
 	Files              []string  `json:"files"`
+	RootDir            string
 	IsDownloadComplete bool
 }
 
@@ -29,8 +30,9 @@ type DownloadsRepository interface {
 }
 
 type DownloadInfo struct {
-	Name  string
-	Files []string
+	Name    string
+	RootDir string
+	Files   []string
 }
 
 type DownloadProgress struct {
@@ -67,6 +69,7 @@ func (s *DownloadsService) Run() {
 		}
 		download.Name = di.Name
 		download.Files = di.Files
+		download.RootDir = di.RootDir
 		err = s.repository.Save(context.Background(), download)
 		if err != nil {
 			log.Printf("Repository failed to save download with id %s:\n%s\n", id, err.Error())
@@ -92,9 +95,10 @@ func (s *DownloadsService) Run() {
 	if err != nil {
 		log.Printf("Error while fetching incomplete downloads:\n%s\n", err.Error())
 	}
-	log.Printf("Resuming %d incomplete downloads", len(incomplete))
+	log.Printf("Found %d incomplete downloads", len(incomplete))
 
 	for _, d := range incomplete {
+		log.Printf("Resuming download %s (%s)", d.ID, d.Name)
 		err = s.downloader.Download(d.ID, d.Source)
 		if err != nil {
 			log.Printf("Error while resuming download %s:\n%s\n", d.ID, err.Error())
@@ -102,17 +106,18 @@ func (s *DownloadsService) Run() {
 	}
 }
 
-func (s *DownloadsService) Add(ctx context.Context, source string) (*Download, error) {
-	match, _ := regexp.MatchString("magnet:\\?xt=urn:btih:[A-Z0-9]{20,50}", source)
+type AddDownloadRequest struct {
+	ID     string `json:"id"`
+	Source string `json:"source"`
+}
+
+func (s *DownloadsService) Add(ctx context.Context, req AddDownloadRequest) (*Download, error) {
+	match, _ := regexp.MatchString("magnet:\\?xt=urn:btih:[A-Z0-9]{20,50}", req.Source)
 	if !match {
-		return nil, fmt.Errorf("Bad download source: %s", source)
+		return nil, fmt.Errorf("Bad download source: %s", req.Source)
 	}
 
-	d := &Download{
-		ID:        uuid.NewV4().String(),
-		Source:    source,
-		CreatedAt: time.Now(),
-	}
+	d := &Download{ID: req.ID, Source: req.Source, CreatedAt: time.Now()}
 
 	err := s.repository.Save(ctx, d)
 	if err != nil {
@@ -129,4 +134,16 @@ func (s *DownloadsService) Add(ctx context.Context, source string) (*Download, e
 
 func (s *DownloadsService) List(ctx context.Context) ([]Download, error) {
 	return s.repository.List(ctx)
+}
+
+func (s *DownloadsService) AbsPaths(ctx context.Context, downloadId string, relFilePaths []string) (absFilePaths []string, err error) {
+	d, err := s.repository.GetById(ctx, downloadId)
+	if err != nil {
+		return nil, err
+	}
+	absFilePaths = make([]string, 0, len(relFilePaths))
+	for _, p := range relFilePaths {
+		absFilePaths = append(absFilePaths, path.Join(d.RootDir, p))
+	}
+	return absFilePaths, nil
 }

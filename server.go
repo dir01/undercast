@@ -26,14 +26,23 @@ func Bootstrap(options Options) (*Server, error) {
 		return nil, err
 	}
 
-	downloadsService := NewDownloadsService(&downloadsRepository{db}, options.TorrentsDownloader)
+	downloadsService := &DownloadsService{
+		repository: &downloadsRepository{db},
+		downloader: options.TorrentsDownloader,
+	}
 	downloadsService.Run()
+
+	mediaService := &MediaService{
+		repository:            &mediaRepository{db},
+		downloadPathsProvider: downloadsService,
+	}
 
 	store := sessions.NewCookieStore([]byte(options.SessionSecret))
 	gob.Register(map[string]interface{}{})
 
 	server := &Server{
 		downloadsService: downloadsService,
+		mediaService:     mediaService,
 		uiDevServerURL:   options.UIDevServerURL,
 		sessionStore:     store,
 		globalPassword:   options.GlobalPassword,
@@ -43,6 +52,7 @@ func Bootstrap(options Options) (*Server, error) {
 
 type Server struct {
 	downloadsService *DownloadsService
+	mediaService     *MediaService
 	uiDevServerURL   string
 	router           *mux.Router
 	sessionStore     sessions.Store
@@ -63,6 +73,7 @@ func (s *Server) initRoutes() {
 	s.router = mux.NewRouter()
 	s.router.HandleFunc("/api/downloads", s.createDownload()).Methods("POST")
 	s.router.HandleFunc("/api/downloads", s.listDownloads()).Methods("GET")
+	s.router.HandleFunc("/api/media", s.createMedia()).Methods("POST")
 	s.router.HandleFunc("/api/auth/login", s.login()).Methods("POST")
 	s.router.HandleFunc("/api/auth/logout", s.logout()).Methods("POST")
 	s.router.HandleFunc("/api/auth/profile", s.getProfile()).Methods("GET")
@@ -71,14 +82,37 @@ func (s *Server) initRoutes() {
 
 func (s *Server) createDownload() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		req := &downloadRequest{}
-		if err := s.decodeRequest(req, r.Body); err != nil {
+		req := AddDownloadRequest{}
+		if err := s.decodeRequest(&req, r.Body); err != nil {
 			s.respond(w, http.StatusBadRequest, nil, err)
 			return
 		}
-		download, err := s.downloadsService.Add(r.Context(), req.Source)
+		download, err := s.downloadsService.Add(r.Context(), req)
 		if err == nil {
 			s.respond(w, http.StatusOK, download, nil)
+		} else {
+			s.respond(w, http.StatusBadRequest, nil, err)
+		}
+	}
+}
+
+func (s *Server) listDownloads() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		downloads, err := s.downloadsService.List(r.Context())
+		s.respond(w, http.StatusOK, downloads, err)
+	}
+}
+
+func (s *Server) createMedia() func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		req := CreateMediaRequest{}
+		if err := s.decodeRequest(&req, r.Body); err != nil {
+			s.respond(w, 400, nil, err)
+			return
+		}
+		media, err := s.mediaService.Create(r.Context(), req)
+		if err == nil {
+			s.respond(w, http.StatusOK, media, nil)
 		} else {
 			s.respond(w, http.StatusBadRequest, nil, err)
 		}
@@ -121,13 +155,6 @@ func (s *Server) getProfile() http.HandlerFunc {
 			return
 		}
 		s.respond(w, http.StatusOK, profile, nil)
-	}
-}
-
-func (s *Server) listDownloads() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		downloads, err := s.downloadsService.List(r.Context())
-		s.respond(w, http.StatusOK, downloads, err)
 	}
 }
 

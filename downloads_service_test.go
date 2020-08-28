@@ -42,10 +42,14 @@ func (suite *DownloadsServiceSuite) TestAddMagnet() {
 		return nil
 	}
 
-	d, err := suite.service.Add(context.Background(), magnetUrl)
+	d, err := suite.service.Add(context.Background(), undercast.AddDownloadRequest{
+		ID:     "some-id",
+		Source: magnetUrl,
+	})
 
 	suite.Require().NoError(err)
 
+	suite.Assert().Equal("some-id", d.ID)
 	suite.Assert().Equal(magnetUrl, d.Source)
 
 	suite.Assert().Equal(magnetUrl, savedDownloads[0].Source)
@@ -56,6 +60,6 @@ func (suite *DownloadsServiceSuite) TestAddMagnet() {
 
 func (suite *DownloadsServiceSuite) TestAddInvalidSource() {
 	ctx := context.Background()
-	_, err := suite.service.Add(ctx, "foo")
+	_, err := suite.service.Add(ctx, undercast.AddDownloadRequest{Source: "foo"})
 	suite.Assert().Equal("Bad download source: foo", err.Error())
 }

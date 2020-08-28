@@ -60,12 +60,14 @@ func (suite *BootstrapSuite) TestInfoUpdate() {
 	onInfo(id, &undercast.DownloadInfo{
 		Name:  "Some-torrent-name",
 		Files: []string{"foo/bar_1", "foo/bar_2"},
+		RootDir: "/some/directory",
 	})
 
 	download, err := findOneAsJSON(suite.db, "downloads", map[string]string{"_id": id})
 	suite.Require().NoError(err)
 	suite.Assert().Equal("Some-torrent-name", gjson.Get(download, "name").Value())
 	suite.Assert().Equal(`["foo/bar_1","foo/bar_2"]`, gjson.Get(download, "files").String())
+	suite.Assert().Equal("/some/directory", gjson.Get(download, "rootDir").String())
 }
 
 func (suite *BootstrapSuite) TestProgressUpdate() {

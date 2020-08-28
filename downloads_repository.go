@@ -16,6 +16,7 @@ type dbDownload struct {
 	TotalBytes         int64     `bson:"totalBytes"`
 	CompleteBytes      int64     `bson:"completeBytes"`
 	Files              []string  `bson:"files"`
+	RootDir            string    `bson:"rootDir"`
 	IsDownloadComplete bool      `bson:"isDownloadComplete"`
 }
 
