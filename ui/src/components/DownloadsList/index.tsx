@@ -1,13 +1,19 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import { h, FunctionComponent, Fragment } from "preact";
-import { Download, DownloadInput } from "../../api";
-import * as style from "./style.css";
 import { useState, useCallback } from "preact/hooks";
 
-type DownloadsListProps = { downloads: (Download | DownloadInput)[] };
+import { Download, DownloadInput } from "../../api";
+
+import * as style from "./style.css";
+
+type DownloadsListProps = {
+    downloads: (Download | DownloadInput)[];
+    createMedia: (download: Download) => Promise<void>;
+};
 
 const DownloadsList: FunctionComponent<DownloadsListProps> = ({
-    downloads
+    downloads,
+    createMedia
 }: DownloadsListProps) => {
     return (
         <ul class={style.downloadList}>
@@ -16,7 +22,7 @@ const DownloadsList: FunctionComponent<DownloadsListProps> = ({
                     {isDownloadInput(d) ? (
                         <JustAddedDownloadItem downloadInput={d} />
                     ) : (
-                        <DownloadItem download={d} />
+                        <DownloadItem download={d} createMedia={createMedia} />
                     )}
                 </li>
             ))}
@@ -24,11 +30,14 @@ const DownloadsList: FunctionComponent<DownloadsListProps> = ({
     );
 };
 
-const DownloadItem: FunctionComponent<{ download: Download }> = ({
-    download
-}: {
+type DownloadItemProps = {
     download: Download;
-}) => {
+    createMedia: (download: Download) => Promise<void>;
+};
+const DownloadItem: FunctionComponent<DownloadItemProps> = ({
+    download,
+    createMedia
+}: DownloadItemProps) => {
     const [areFilesVisible, setFilesVisible] = useState(false);
     const toggleFiles = useCallback(() => setFilesVisible(!areFilesVisible), [
         areFilesVisible
@@ -36,8 +45,9 @@ const DownloadItem: FunctionComponent<{ download: Download }> = ({
     return (
         <Fragment>
             <span class={style.title} onClick={toggleFiles}>
-                {download.name}
+                {download.name} ({download.percentDone})
             </span>
+            <button onClick={() => createMedia(download)}>publish</button>
             {areFilesVisible ? (
                 <ul class={style.fileList}>
                     {download.files.map(f => (

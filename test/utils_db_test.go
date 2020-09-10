@@ -2,7 +2,6 @@ package server_test
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	uuid "github.com/satori/go.uuid"
 	"github.com/testcontainers/testcontainers-go"
@@ -47,25 +46,29 @@ func getDatabase(mongoURI string) (*mongo.Database, error) {
 	return undercast.GetDb(mongoURI)
 }
 
-func (s *ServerSuite) findOneAsJSON(collectionName string, filter interface{}) string {
-	str, err := findOneAsJSON(s.db, collectionName, filter)
-	s.Require().NoError(err)
-	return str
+func findOne(db *mongo.Database, collectionName string, filter interface{}) (map[string]interface{}, error) {
+	results, err := find(db, collectionName, filter)
+	if err != nil {
+		return nil, err
+	}
+	if len(results) != 1 {
+		return nil, fmt.Errorf("Expected exactly one result, got %d instead", len(results))
+	}
+	return results[0], nil
 }
 
-func findOneAsJSON(db *mongo.Database, collectionName string, filter interface{}) (string, error) {
+func find(db *mongo.Database, collectionName string, filter interface{}) ([]map[string]interface{}, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	var result map[string]interface{}
-	err := db.Collection(collectionName).FindOne(ctx, filter).Decode(&result)
+	var results []map[string]interface{}
+	cursor, err := db.Collection(collectionName).Find(ctx, filter)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	b, err := json.Marshal(result)
-	if err != nil {
-		return "", err
+	if err := cursor.All(ctx, &results); err != nil {
+		return nil, err
 	}
-	return string(b), nil
+	return results, nil
 }
 
 func dropDb(db *mongo.Database) error {
@@ -85,17 +88,31 @@ type downloadOpts struct {
 	Files              []string `bson:"files"`
 }
 
-func (s *ServerSuite) insertDownload(opts *downloadOpts) {
-	err := insertDownload(s.db, opts)
-	s.Require().NoError(err)
-}
-
 func insertDownload(db *mongo.Database, opts *downloadOpts) error {
 	if opts.ID == "" {
 		opts.ID = uuid.NewV4().String()
 	}
 	ctx := context.Background()
 	_, err := db.Collection("downloads").InsertOne(ctx, opts)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+type mediaOpts struct {
+	ID         string   `bson:"_id"`
+	DownloadID string   `bson:"downloadId"`
+	Status     string   `bson:"status"`
+	Files      []string `bson:"files"`
+}
+
+func insertMedia(db *mongo.Database, opts *mediaOpts) error {
+	if opts.ID == "" {
+		opts.ID = uuid.NewV4().String()
+	}
+	ctx := context.Background()
+	_, err := db.Collection("media").InsertOne(ctx, opts)
 	if err != nil {
 		return err
 	}

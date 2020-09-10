@@ -23,6 +23,18 @@ export default class API {
         return Result.ok(resp.payload.map(p => new Download(p)));
     }
 
+    async createMedia(media: {
+        id: string;
+        downloadId: string;
+        files: string[];
+    }) {
+        const resp = await this.request("post", "/media", media);
+        if (resp.status === "error") {
+            return Result.fail(resp.error);
+        }
+        return Result.ok(new Media(resp.payload as any));
+    }
+
     public async getProfile() {
         const resp = await this.request("get", "/auth/profile");
         if (resp.status === "error") {
@@ -103,6 +115,26 @@ export class Download {
         this.source = source;
         this.percentDone = Math.round((completeBytes / totalBytes) * 100);
         this.files = files;
+    }
+}
+
+export class Media {
+    public id: string;
+    public downloadId: string;
+    public url: string;
+
+    constructor({
+        id,
+        url,
+        downloadId
+    }: {
+        id: string;
+        url: string;
+        downloadId: string;
+    }) {
+        this.id = id;
+        this.url = url;
+        this.downloadId = downloadId;
     }
 }
 

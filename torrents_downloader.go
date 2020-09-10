@@ -6,20 +6,22 @@ import (
 	"time"
 )
 
-func NewTorrentsDownloader() *TorrentsDownloader {
+func NewTorrentsDownloader(dataDir string) *TorrentsDownloader {
 	cfg := anacrolix.NewDefaultClientConfig()
-	cfg.DataDir = "./data"
+	cfg.DataDir = dataDir
 	anacrolixClient, err := anacrolix.NewClient(cfg)
 	if err != nil {
 		fmt.Println(err)
 	}
 	return &TorrentsDownloader{
 		torrentClient: anacrolixClient,
+		dataDir:       dataDir,
 	}
 }
 
 type TorrentsDownloader struct {
 	torrentClient *anacrolix.Client
+	dataDir       string
 	onProgress    func(id string, p *DownloadProgress)
 	onInfo        func(id string, di *DownloadInfo)
 }
@@ -40,9 +42,10 @@ func (td *TorrentsDownloader) Download(id string, source string) error {
 		t.DownloadAll()
 
 		if td.onInfo != nil {
-			td.onInfo(id, &DownloadInfo{
-				Name:  t.Name(),
-				Files: extractFilenames(t.Files()),
+			go td.onInfo(id, &DownloadInfo{
+				Name:    t.Name(),
+				Files:   extractFilenames(t.Files()),
+				RootDir: td.dataDir,
 			})
 		}
 
@@ -62,7 +65,7 @@ func (td *TorrentsDownloader) Download(id string, source string) error {
 				CompleteBytes:      bytesCompleted,
 				IsDownloadComplete: isComplete,
 			}
-			td.onProgress(id, p)
+			go td.onProgress(id, p)
 		}
 	}()
 

@@ -7,13 +7,13 @@ import (
 	"net/http/httptest"
 )
 
-func (s *ServerSuite) requestAPI(method string, url string, body interface{}) *httptest.ResponseRecorder {
+func (suite *ServerSuite) requestAPI(method string, url string, body interface{}) *httptest.ResponseRecorder {
 	bodyBytes, err := json.Marshal(body)
-	s.Require().NoError(err)
+	suite.Require().NoError(err)
 	req, _ := http.NewRequest(method, url, bytes.NewReader(bodyBytes))
-	req.Header["Cookie"] = s.tempCookies
+	req.Header["Cookie"] = suite.tempCookies
 	rr := httptest.NewRecorder()
-	s.server.ServeHTTP(rr, req)
-	s.tempCookies = append(s.tempCookies, rr.HeaderMap["Set-Cookie"]...)
+	suite.server.ServeHTTP(rr, req)
+	suite.tempCookies = append(suite.tempCookies, rr.HeaderMap["Set-Cookie"]...)
 	return rr
 }

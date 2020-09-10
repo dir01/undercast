@@ -4,12 +4,16 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 	"io"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 )
 
 type Options struct {
@@ -18,6 +22,9 @@ type Options struct {
 	SessionSecret      string
 	GlobalPassword     string
 	TorrentsDownloader Downloader
+	S3Config           *aws.Config
+	S3BucketName       string
+	TempDir            string
 }
 
 func Bootstrap(options Options) (*Server, error) {
@@ -32,10 +39,43 @@ func Bootstrap(options Options) (*Server, error) {
 	}
 	downloadsService.Run()
 
-	mediaService := &MediaService{
-		repository:            &mediaRepository{db},
-		downloadPathsProvider: downloadsService,
+	awsSession, err := session.NewSession(options.S3Config)
+	if err != nil {
+		return nil, err
 	}
+	s3Client := s3.New(awsSession)
+
+	if options.TempDir == "" {
+		options.TempDir = os.TempDir()
+	}
+	converter, err := NewFFMpegMediaConverter(options.TempDir)
+	if err != nil {
+		return nil, err
+	}
+	mediaService := &MediaService{
+		repository:       &mediaRepository{db},
+		downloadsService: downloadsService,
+		converter:        converter,
+		storage: &s3Storage{
+			s3Config:   options.S3Config,
+			s3Client:   s3Client,
+			bucketName: options.S3BucketName,
+			keyPrefix:  "media",
+		},
+	}
+	mediaService.Run()
+
+	feedsService := &FeedsService{
+		mediaService: mediaService,
+		repository:   &feedsRepository{db},
+		storage: &s3Storage{
+			s3Config:   options.S3Config,
+			s3Client:   s3Client,
+			bucketName: options.S3BucketName,
+			keyPrefix:  "feeds",
+		},
+	}
+	feedsService.Run()
 
 	store := sessions.NewCookieStore([]byte(options.SessionSecret))
 	gob.Register(map[string]interface{}{})
@@ -43,6 +83,7 @@ func Bootstrap(options Options) (*Server, error) {
 	server := &Server{
 		downloadsService: downloadsService,
 		mediaService:     mediaService,
+		feedsService:     feedsService,
 		uiDevServerURL:   options.UIDevServerURL,
 		sessionStore:     store,
 		globalPassword:   options.GlobalPassword,
@@ -53,6 +94,7 @@ func Bootstrap(options Options) (*Server, error) {
 type Server struct {
 	downloadsService *DownloadsService
 	mediaService     *MediaService
+	feedsService     *FeedsService
 	uiDevServerURL   string
 	router           *mux.Router
 	sessionStore     sessions.Store
@@ -74,6 +116,7 @@ func (s *Server) initRoutes() {
 	s.router.HandleFunc("/api/downloads", s.createDownload()).Methods("POST")
 	s.router.HandleFunc("/api/downloads", s.listDownloads()).Methods("GET")
 	s.router.HandleFunc("/api/media", s.createMedia()).Methods("POST")
+	s.router.HandleFunc("/api/episodes", s.createEpisode()).Methods("POST")
 	s.router.HandleFunc("/api/auth/login", s.login()).Methods("POST")
 	s.router.HandleFunc("/api/auth/logout", s.logout()).Methods("POST")
 	s.router.HandleFunc("/api/auth/profile", s.getProfile()).Methods("GET")
@@ -113,6 +156,22 @@ func (s *Server) createMedia() func(http.ResponseWriter, *http.Request) {
 		media, err := s.mediaService.Create(r.Context(), req)
 		if err == nil {
 			s.respond(w, http.StatusOK, media, nil)
+		} else {
+			s.respond(w, http.StatusBadRequest, nil, err)
+		}
+	}
+}
+
+func (s *Server) createEpisode() func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		req := CreateEpisodeRequest{}
+		if err := s.decodeRequest(&req, r.Body); err != nil {
+			s.respond(w, 400, nil, err)
+			return
+		}
+		err := s.feedsService.CreateEpisode(r.Context(), req)
+		if err == nil {
+			s.respond(w, http.StatusOK, "OK", nil)
 		} else {
 			s.respond(w, http.StatusBadRequest, nil, err)
 		}

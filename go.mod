@@ -4,9 +4,12 @@ go 1.13
 
 require (
 	github.com/anacrolix/torrent v1.15.2
+	github.com/aws/aws-sdk-go v1.34.12
 	github.com/cespare/reflex v0.3.0 // indirect
 	github.com/gorilla/mux v1.7.4
 	github.com/gorilla/sessions v1.2.0
+	github.com/jbub/podcasts v0.0.0-20200707071256-789912483b33
+	github.com/johannesboyne/gofakes3 v0.0.0-20200716060623-6b2b4cb092cc
 	github.com/klauspost/compress v1.10.10 // indirect
 	github.com/matryer/moq v0.0.0-20200816112511-720d53e65d2f // indirect
 	github.com/satori/go.uuid v1.2.0

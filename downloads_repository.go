@@ -79,6 +79,7 @@ func (r *downloadsRepository) GetById(ctx context.Context, id string) (*Download
 		downloads = append(downloads, Download(dbO))
 	}
 
+	// FIXME: panic
 	return &downloads[0], nil
 }
 

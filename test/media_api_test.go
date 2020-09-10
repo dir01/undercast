@@ -5,25 +5,37 @@ import (
 	"net/http"
 	"path"
 	"runtime"
+	"time"
 )
 
-func (s *ServerSuite) TestCreateMedia() {
+func (suite *ServerSuite) TestCreateMedia() {
 	testDir := getCurrentTestDir()
 	downloadId := uuid.NewV4().String()
-	s.insertDownload(&downloadOpts{
-		ID:      downloadId,
-		Source:  "some-source",
-		RootDir: testDir,
-		Files:   []string{"one.mp3", "two.mp3", "three.mp3"},
-	})
 
-	resp := s.requestAPI("POST", "/api/media", map[string]interface{}{
+	err := insertDownload(suite.db, &downloadOpts{
+		ID:                 downloadId,
+		Source:             "some-source",
+		RootDir:            testDir,
+		Files:              []string{"one.mp3", "two.mp3", "three.mp3"},
+		IsDownloadComplete: true,
+	})
+	suite.Require().NoError(err)
+
+	resp := suite.requestAPI("POST", "/api/media", map[string]interface{}{
 		"id":         "some-media-id",
 		"downloadId": downloadId,
 		"files":      []string{"one.mp3", "two.mp3"},
 	})
 
-	s.Require().Equal(http.StatusOK, resp.Code)
+	suite.Assert().Equal(http.StatusOK, resp.Code)
+
+	suite.Assert().Eventually(func() bool {
+		media, err := findOne(suite.db, "media", map[string]string{"_id": "some-media-id"})
+		if err != nil {
+			return false
+		}
+		return media["state"] == "uploaded"
+	}, 10*time.Second, 100*time.Millisecond)
 }
 
 func getCurrentTestDir() string {

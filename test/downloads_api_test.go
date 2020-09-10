@@ -6,26 +6,27 @@ import (
 	"net/http"
 )
 
-func (s *ServerSuite) TestCreateDownload() {
+func (suite *ServerSuite) TestCreateDownload() {
 	magnetLink := "magnet:?xt=urn:btih:980E4184AEE6F326A9F9E2EE3E9D40ACAA90BC40"
-
-	var downloadedId string
-	s.torrentsDownloader.DownloadFunc = func(id, source string) error {
-		downloadedId = id
+	var downloadId string
+	suite.torrentsDownloader.DownloadFunc = func(id, source string) error {
+		downloadId = id
 		return nil
 	}
 
-	resp := s.requestAPI("POST", "/api/downloads", map[string]string{"source": magnetLink})
-	s.Assert().Equal(http.StatusOK, resp.Code)
-	s.Assert().Equal(magnetLink, gjson.Get(resp.Body.String(), "payload.source").Value())
-	s.Assert().Equal(downloadedId, gjson.Get(resp.Body.String(), "payload.id").Value())
-	dbResultStr := s.findOneAsJSON("downloads", bson.M{})
-	s.Assert().Equal(magnetLink, gjson.Get(dbResultStr, "source").Value())
+	resp := suite.requestAPI("POST", "/api/downloads", map[string]string{"source": magnetLink})
+	suite.Assert().Equal(http.StatusOK, resp.Code)
+	suite.Assert().Equal(magnetLink, gjson.Get(resp.Body.String(), "payload.source").Value())
+	suite.Assert().Equal(downloadId, gjson.Get(resp.Body.String(), "payload.id").Value())
+	download, err := findOne(suite.db, "downloads", bson.M{})
+	suite.Require().NoError(err)
+	suite.Assert().Equal(magnetLink, download["source"])
 }
 
-func (s *ServerSuite) TestListDownloads() {
-	s.insertDownload(&downloadOpts{Source: "some://source"})
-	resp := s.requestAPI("GET", "/api/downloads", nil)
-	s.Assert().Equal(http.StatusOK, resp.Code)
-	s.Assert().Equal("some://source", gjson.Get(resp.Body.String(), "payload.0.source").Value())
+func (suite *ServerSuite) TestListDownloads() {
+	err := insertDownload(suite.db, &downloadOpts{Source: "some://source"})
+	suite.Require().NoError(err)
+	resp := suite.requestAPI("GET", "/api/downloads", nil)
+	suite.Assert().Equal(http.StatusOK, resp.Code)
+	suite.Assert().Equal("some://source", gjson.Get(resp.Body.String(), "payload.0.source").Value())
 }

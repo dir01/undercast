@@ -1,45 +1,45 @@
 package server_test
 
-func (s *ServerSuite) TestSuccessfulLogin() {
-	resp := s.requestAPI("POST", "/api/auth/login", map[string]string{"password": s.globalPassword})
-	s.Assert().Contains(resp.Header().Get("Set-Cookie"), "auth-session=")
-	s.Assert().Equal(
+func (suite *ServerSuite) TestSuccessfulLogin() {
+	resp := suite.requestAPI("POST", "/api/auth/login", map[string]string{"password": suite.globalPassword})
+	suite.Assert().Contains(resp.Header().Get("Set-Cookie"), "auth-session=")
+	suite.Assert().Equal(
 		`{"error":"","payload":"OK","status":"success"}`,
 		resp.Body.String(),
 	)
 }
 
-func (s *ServerSuite) TestUnsuccessfulLogin() {
-	resp := s.requestAPI("POST", "/api/auth/login", map[string]string{"password": "wrong-password"})
+func (suite *ServerSuite) TestUnsuccessfulLogin() {
+	resp := suite.requestAPI("POST", "/api/auth/login", map[string]string{"password": "wrong-password"})
 	cookie := resp.Header().Get("Set-Cookie")
-	s.Assert().Empty(cookie)
-	s.Assert().Equal(
+	suite.Assert().Empty(cookie)
+	suite.Assert().Equal(
 		`{"error":"wrong_password","payload":null,"status":"error"}`,
 		resp.Body.String(),
 	)
 }
 
-func (s *ServerSuite) TestGetProfile() {
-	s.requestAPI("POST", "/api/auth/login", map[string]string{"password": s.globalPassword})
-	resp := s.requestAPI("GET", "/api/auth/profile", nil)
-	s.Assert().Equal(
+func (suite *ServerSuite) TestGetProfile() {
+	suite.requestAPI("POST", "/api/auth/login", map[string]string{"password": suite.globalPassword})
+	resp := suite.requestAPI("GET", "/api/auth/profile", nil)
+	suite.Assert().Equal(
 		`{"error":"","payload":{"isActive":true},"status":"success"}`,
 		resp.Body.String(),
 	)
 }
 
-func (s *ServerSuite) TestFailGetProfile() {
-	resp := s.requestAPI("GET", "/api/auth/profile", nil)
-	s.Assert().Equal(
+func (suite *ServerSuite) TestFailGetProfile() {
+	resp := suite.requestAPI("GET", "/api/auth/profile", nil)
+	suite.Assert().Equal(
 		`{"error":"no_profile","payload":null,"status":"error"}`,
 		resp.Body.String(),
 	)
 }
 
-func (s *ServerSuite) TestLogout() {
-	resp := s.requestAPI("POST", "/api/auth/login", map[string]string{"password": s.globalPassword})
-	s.Require().Contains(resp.Header().Get("Set-Cookie"), "auth-session=")
-	resp = s.requestAPI("POST", "/api/auth/logout", nil)
+func (suite *ServerSuite) TestLogout() {
+	resp := suite.requestAPI("POST", "/api/auth/login", map[string]string{"password": suite.globalPassword})
+	suite.Require().Contains(resp.Header().Get("Set-Cookie"), "auth-session=")
+	resp = suite.requestAPI("POST", "/api/auth/logout", nil)
 	// TODO: test that expiration date is around current date
-	s.Require().Contains(resp.Header().Get("Set-Cookie"), "Expires=")
+	suite.Require().Contains(resp.Header().Get("Set-Cookie"), "Expires=")
 }
